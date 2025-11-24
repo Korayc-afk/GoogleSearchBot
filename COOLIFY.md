@@ -11,22 +11,35 @@ Projeyi Git repository'nize push edin.
 1. Coolify dashboard'una gidin
 2. "New Resource" > "Application" seçin
 3. Git repository'nizi bağlayın
-
+ 
 ## 3. Build Ayarları
 
-- **Build Pack**: `Dockerfile` (backend/Dockerfile kullanılacak)
-- **Dockerfile Path**: `backend/Dockerfile`
-- **Build Context**: `backend/`
+**ÖNEMLİ:** Coolify'da şu ayarları yapın:
+
+- **Build Pack**: `Dockerfile`
+- **Base Directory**: `/` (boş bırakın veya root)
+- **Dockerfile Location**: `backend/Dockerfile`
 
 ## 4. Environment Variables
 
-Aşağıdaki environment variable'ları ekleyin:
+**Environment Variable'ları nereye gireceğim?**
+
+1. Coolify'da uygulamanızı oluşturduktan sonra
+2. Uygulama sayfasında **"Environment Variables"** veya **"Variables"** sekmesine tıklayın
+3. Veya uygulama ayarlarında (Settings) **"Environment"** bölümüne gidin
+4. "Add Variable" veya "+" butonuna tıklayın
+5. Aşağıdaki variable'ları ekleyin:
 
 ```
 SERPAPI_KEY=bb970a4dea7a4ea4952712cd9bd6d6cb73765f27eee2bcb221bc63c7ba7b6068
 DATABASE_URL=sqlite:///./data/searchbot.db
 PORT=8000
 ```
+
+**Not:** Coolify'da genellikle:
+- Uygulama detay sayfasında sağ tarafta veya üstte "Environment" veya "Variables" sekmesi bulunur
+- Ya da uygulama ayarları (Settings) içinde "Environment Variables" bölümü vardır
+- Her variable için "Key" ve "Value" alanlarını doldurup kaydedin
 
 ## 5. Volume Ayarları
 
