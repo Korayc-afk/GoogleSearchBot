@@ -17,15 +17,35 @@ serpapi_client = SerpApiClient()
 
 @router.post("/run")
 def run_search_now(db: Session = Depends(get_db)):
-    """Manuel olarak arama yapar"""
+    """Manuel olarak arama yapar (çoklu kelime desteği ile)"""
     settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
     
     if not settings:
         raise HTTPException(status_code=404, detail="Aktif arama ayarı bulunamadı")
     
-    perform_search(db, settings)
+    # Çoklu arama kelimesi desteği
+    queries = [q.strip() for q in settings.search_query.split(',') if q.strip()]
+    results = []
     
-    return {"success": True, "message": "Arama tamamlandı"}
+    for query in queries:
+        temp_settings = SearchSettings(
+            id=settings.id,
+            search_query=query,
+            location=settings.location,
+            enabled=settings.enabled,
+            interval_hours=settings.interval_hours
+        )
+        try:
+            perform_search(db, temp_settings)
+            results.append({"query": query, "status": "success"})
+        except Exception as e:
+            results.append({"query": query, "status": "error", "error": str(e)})
+    
+    return {
+        "success": True,
+        "message": f"{len(queries)} arama tamamlandı",
+        "results": results
+    }
 
 
 @router.get("/results", response_model=List[SearchResultResponse])

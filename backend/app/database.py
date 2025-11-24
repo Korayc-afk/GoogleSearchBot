@@ -22,7 +22,7 @@ class SearchSettings(Base):
     __tablename__ = "search_settings"
     
     id = Column(Integer, primary_key=True, index=True)
-    search_query = Column(String, nullable=False, default="padişah bet")
+    search_query = Column(String, nullable=False, default="padişah bet")  # Virgülle ayrılmış çoklu kelime desteği
     location = Column(String, nullable=False, default="Fatih,Istanbul")  # Fatih,Istanbul veya Istanbul
     enabled = Column(Boolean, default=True)
     interval_hours = Column(Integer, default=12)

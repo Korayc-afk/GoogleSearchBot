@@ -3,6 +3,8 @@ import axios from 'axios'
 import Settings from './components/Settings'
 import Dashboard from './components/Dashboard'
 import Reports from './components/Reports'
+import Charts from './components/Charts'
+import Analytics from './components/Analytics'
 import './App.css'
 
 const API_BASE = import.meta.env.PROD ? '/api' : 'http://localhost:8000/api'
@@ -79,6 +81,18 @@ function App() {
             Raporlar
           </button>
           <button
+            className={activeTab === 'charts' ? 'active' : ''}
+            onClick={() => setActiveTab('charts')}
+          >
+            Grafikler
+          </button>
+          <button
+            className={activeTab === 'analytics' ? 'active' : ''}
+            onClick={() => setActiveTab('analytics')}
+          >
+            Analitik
+          </button>
+          <button
             className={activeTab === 'settings' ? 'active' : ''}
             onClick={() => setActiveTab('settings')}
           >
@@ -90,6 +104,8 @@ function App() {
       <main className="main">
         {activeTab === 'dashboard' && <Dashboard API_BASE={API_BASE} />}
         {activeTab === 'reports' && <Reports API_BASE={API_BASE} />}
+        {activeTab === 'charts' && <Charts API_BASE={API_BASE} />}
+        {activeTab === 'analytics' && <Analytics API_BASE={API_BASE} />}
         {activeTab === 'settings' && (
           <Settings
             API_BASE={API_BASE}

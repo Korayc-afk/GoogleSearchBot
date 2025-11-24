@@ -76,7 +76,7 @@ function Settings({ API_BASE, settings, onUpdate }) {
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label>Aranacak Kelime</label>
+          <label>Aranacak Kelime(ler)</label>
           <input
             type="text"
             value={formData.search_query}
@@ -86,6 +86,9 @@ function Settings({ API_BASE, settings, onUpdate }) {
             placeholder="padişah bet"
             required
           />
+          <small style={{ color: '#666', display: 'block', marginTop: '0.25rem' }}>
+            Çoklu kelime için virgülle ayırın: "padişah bet, bahis, casino"
+          </small>
         </div>
 
         <div className="form-group">

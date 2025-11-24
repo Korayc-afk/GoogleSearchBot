@@ -1,10 +1,13 @@
 import logging
+import asyncio
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.interval import IntervalTrigger, CronTrigger
 from sqlalchemy.orm import Session
-from datetime import datetime
+from sqlalchemy import func
+from datetime import datetime, timedelta
 from app.database import SessionLocal, SearchSettings, SearchResult, SearchLink
 from app.serpapi_client import SerpApiClient
+from app.email_service import email_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -52,19 +55,129 @@ def perform_search(db: Session, settings: SearchSettings):
         db.commit()
         logger.info(f"Arama tamamlandı: {len(links)} link kaydedildi")
         
+        # Pozisyon değişikliklerini kontrol et ve email gönder
+        check_position_changes(db, links)
+        
     except Exception as e:
         logger.error(f"Arama sırasında hata: {str(e)}")
         db.rollback()
 
 
+def check_position_changes(db: Session, new_links: list):
+    """Pozisyon değişikliklerini kontrol et ve email gönder"""
+    try:
+        # Son aramadan önceki son aramayı bul
+        last_result = db.query(SearchResult)\
+            .order_by(SearchResult.search_date.desc())\
+            .offset(1)\
+            .first()
+        
+        if not last_result:
+            return
+        
+        # Önceki aramadaki linkleri al
+        old_links = db.query(SearchLink)\
+            .filter(SearchLink.search_result_id == last_result.id)\
+            .all()
+        
+        old_positions = {link.url: link.position for link in old_links}
+        
+        # Yeni linklerle karşılaştır
+        for new_link_data in new_links:
+            url = new_link_data["url"]
+            new_position = new_link_data["position"]
+            
+            if url in old_positions:
+                old_position = old_positions[url]
+                change = new_position - old_position
+                
+                # Önemli değişiklik varsa email gönder
+                if abs(change) >= 3:  # 3+ pozisyon değişikliği
+                    asyncio.create_task(
+                        email_service.send_position_change_alert(
+                            url=url,
+                            domain=new_link_data.get("domain", ""),
+                            old_position=old_position,
+                            new_position=new_position,
+                            change=change
+                        )
+                    )
+                
+                # Kritik düşüş (5+ pozisyon)
+                if change >= 5:
+                    asyncio.create_task(
+                        email_service.send_critical_drop_alert(
+                            url=url,
+                            domain=new_link_data.get("domain", ""),
+                            old_position=old_position,
+                            new_position=new_position
+                        )
+                    )
+    except Exception as e:
+        logger.error(f"Pozisyon kontrolü hatası: {str(e)}")
+
+
+async def send_daily_summary_email():
+    """Günlük özet email gönder"""
+    db = SessionLocal()
+    try:
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        yesterday_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
+        yesterday_end = yesterday.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        # Dünkü aramaları al
+        results = db.query(SearchResult)\
+            .filter(SearchResult.search_date >= yesterday_start)\
+            .filter(SearchResult.search_date <= yesterday_end)\
+            .all()
+        
+        if not results:
+            return
+        
+        # Top linkleri al
+        from app.api.search import get_link_stats_for_period
+        top_links = get_link_stats_for_period(
+            db, yesterday_start, yesterday_end, limit=10
+        )
+        
+        # Email gönder
+        await email_service.send_daily_summary(
+            total_searches=len(results),
+            unique_links=len(set(link.url for result in results for link in result.links)),
+            top_links=[link.dict() if hasattr(link, 'dict') else link for link in top_links],
+            date=yesterday.strftime("%Y-%m-%d")
+        )
+    except Exception as e:
+        logger.error(f"Günlük özet email hatası: {str(e)}")
+    finally:
+        db.close()
+
+
+def run_daily_summary():
+    """Günlük özet email gönder (synchronous wrapper)"""
+    asyncio.run(send_daily_summary_email())
+
+
 def run_scheduled_searches():
-    """Tüm aktif ayarlar için arama yapar"""
+    """Tüm aktif ayarlar için arama yapar (çoklu kelime desteği ile)"""
     db = SessionLocal()
     try:
         settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
         
         if settings:
-            perform_search(db, settings)
+            # Çoklu arama kelimesi desteği (virgülle ayrılmış)
+            queries = [q.strip() for q in settings.search_query.split(',') if q.strip()]
+            
+            for query in queries:
+                # Geçici settings objesi oluştur
+                temp_settings = SearchSettings(
+                    id=settings.id,
+                    search_query=query,
+                    location=settings.location,
+                    enabled=settings.enabled,
+                    interval_hours=settings.interval_hours
+                )
+                perform_search(db, temp_settings)
         else:
             logger.warning("Aktif arama ayarı bulunamadı")
     except Exception as e:
@@ -87,8 +200,16 @@ def start_scheduler():
         replace_existing=True
     )
     
+    # Her gün saat 09:00'da günlük özet email gönder
+    scheduler.add_job(
+        run_daily_summary,
+        trigger=CronTrigger(hour=9, minute=0),
+        id="daily_summary",
+        replace_existing=True
+    )
+    
     scheduler.start()
-    logger.info("Scheduler başlatıldı - 12 saatte bir arama yapılacak")
+    logger.info("Scheduler başlatıldı - 12 saatte bir arama yapılacak, günlük özet 09:00'da gönderilecek")
 
 
 def stop_scheduler():

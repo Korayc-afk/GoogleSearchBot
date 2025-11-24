@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 from app.database import init_db
-from app.api import search, settings, export
+from app.api import search, settings, export, analytics
 from app.scheduler import start_scheduler
 
 app = FastAPI(
@@ -26,6 +26,7 @@ app.add_middleware(
 app.include_router(search.router)
 app.include_router(settings.router)
 app.include_router(export.router)
+app.include_router(analytics.router)
 
 # Frontend static files (production için)
 # Docker'da frontend /app/frontend/dist olarak kopyalanıyor
