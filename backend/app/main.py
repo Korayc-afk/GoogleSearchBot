@@ -54,7 +54,7 @@ if os.path.exists(frontend_path):
     if os.path.exists(assets_path):
         app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
 
-# Root route - EN SON eklenmeli (sadece "/" için)
+# Root route ve Frontend SPA routing - EN SON eklenmeli
 if os.path.exists(frontend_path):
     index_path = os.path.join(frontend_path, "index.html")
     
@@ -67,6 +67,24 @@ if os.path.exists(frontend_path):
             "docs": "/docs",
             "health": "/api/health",
             "frontend": "Frontend index.html not found"
+        }
+    
+    # SPA için catch-all route - API route'larından SONRA olmalı
+    # Bu route sadece API route'ları match edilmediğinde çalışır
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # API, docs, openapi route'ları zaten yukarıda handle edildi
+        # Static dosyalar da mount edildi
+        # Geri kalan her şey frontend'e yönlendir
+        
+        # Eğer buraya geldiyse, frontend route'u demektir
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        
+        return {
+            "error": "Frontend not found",
+            "api": "/api/health",
+            "docs": "/docs"
         }
 else:
     # Frontend yoksa basit bir mesaj döndür
