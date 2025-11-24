@@ -9,6 +9,13 @@ SerpApi kullanarak Google aramalarını otomatik olarak yapan, sonuçları kayde
 - 📈 **Raporlama**: Günlük, haftalık ve aylık detaylı raporlar
 - 🔗 **Link Takibi**: İlk sayfadaki linklerin pozisyon, görünme sayısı ve aktif gün takibi
 - ⚙️ **Ayarlar**: Dashboard'dan arama kelimesi, konum ve interval ayarları
+- 🌙 **Dark Mode**: Modern dark mode desteği
+- 📊 **Grafikler**: Pozisyon trend, domain dağılım grafikleri
+- 📧 **Email Bildirimleri**: Pozisyon değişiklikleri ve günlük özet email'leri
+- 🔍 **Gelişmiş Filtreleme**: Domain, URL, tarih aralığı filtreleme
+- 📈 **Analitik**: Rakip analizi, en çok hareket eden linkler
+- 📥 **Excel Export**: Günlük pozisyonlar, özet ve pozisyon geçmişi Excel export
+- 🔢 **Çoklu Arama**: Virgülle ayrılmış birden fazla kelime takibi
 - 🐳 **Docker Desteği**: Coolify ve VPS için hazır
 
 ## 🚀 Kurulum
@@ -91,6 +98,15 @@ Uygulama `http://localhost:8000` adresinde çalışacaktır.
 
 - `SERPAPI_KEY`: SerpApi API anahtarı (varsayılan: kod içinde tanımlı)
 - `DATABASE_URL`: Veritabanı URL'i (varsayılan: SQLite)
+- `EMAIL_ENABLED`: Email bildirimleri (true/false, varsayılan: false)
+- `SMTP_HOST`: SMTP sunucu (varsayılan: smtp.gmail.com)
+- `SMTP_PORT`: SMTP port (varsayılan: 587)
+- `SMTP_USER`: SMTP kullanıcı adı
+- `SMTP_PASSWORD`: SMTP şifresi
+- `SMTP_FROM`: Gönderen email adresi
+- `NOTIFICATION_EMAILS`: Bildirim gönderilecek email'ler (virgülle ayrılmış)
+
+Email kurulumu için `EMAIL_SETUP.md` dosyasına bakın.
 
 ### Arama Konumları
 
