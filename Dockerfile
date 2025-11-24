@@ -1,7 +1,8 @@
 # Frontend build stage
 FROM node:18-alpine AS frontend-builder
 WORKDIR /build
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY frontend/package.json ./
+# package-lock.json yoksa npm install otomatik oluşturur
 RUN npm install
 COPY frontend/ ./
 RUN npm run build

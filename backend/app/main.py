@@ -27,7 +27,11 @@ app.include_router(search.router)
 app.include_router(settings.router)
 
 # Frontend static files (production için)
-frontend_path = os.path.join(os.path.dirname(__file__), "../frontend/dist")
+# Docker'da frontend /app/frontend/dist olarak kopyalanıyor
+frontend_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
+# Eğer yukarıdaki yoksa, Docker path'ini dene
+if not os.path.exists(frontend_path):
+    frontend_path = "/app/frontend/dist"
 if os.path.exists(frontend_path):
     # Static dosyalar için
     assets_path = os.path.join(frontend_path, "assets")
