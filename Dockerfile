@@ -1,3 +1,12 @@
+# Frontend build stage
+FROM node:18-alpine AS frontend-builder
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# Backend stage
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -14,6 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Uygulama dosyaları
 COPY backend/app/ ./app/
+
+# Frontend build dosyalarını kopyala
+COPY --from=frontend-builder /build/dist ./frontend/dist
 
 # Data dizini oluştur
 RUN mkdir -p /app/data
