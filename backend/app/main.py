@@ -115,5 +115,15 @@ async def shutdown_event():
 @app.get("/api/health")
 def health_check():
     """Health check endpoint"""
-    return {"status": "ok", "message": "Google Search Bot is running"}
+    # Frontend path kontrolü
+    frontend_check = os.path.exists(frontend_path) if 'frontend_path' in locals() else False
+    index_check = os.path.exists(os.path.join(frontend_path, "index.html")) if frontend_check else False
+    
+    return {
+        "status": "ok",
+        "message": "Google Search Bot is running",
+        "frontend_path": frontend_path if 'frontend_path' in locals() else "not set",
+        "frontend_exists": frontend_check,
+        "index_exists": index_check
+    }
 
