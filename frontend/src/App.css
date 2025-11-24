@@ -225,3 +225,100 @@
   color: #667eea;
 }
 
+/* Dark Mode Toggle */
+.dark-mode-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.5rem;
+  transition: all 0.3s;
+}
+
+.dark-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* Dark Mode Styles */
+.app.dark,
+body.dark-mode {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.app.dark .main {
+  background: #1a1a1a;
+}
+
+.app.dark .card {
+  background: #2d2d2d;
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.app.dark .card h2 {
+  color: #e0e0e0;
+}
+
+.app.dark .table {
+  color: #e0e0e0;
+}
+
+.app.dark .table th {
+  background: #3a3a3a;
+  color: #e0e0e0;
+  border-bottom: 1px solid #4a4a4a;
+}
+
+.app.dark .table td {
+  border-bottom: 1px solid #4a4a4a;
+}
+
+.app.dark .table tr:hover {
+  background: #3a3a3a;
+}
+
+.app.dark .form-group label {
+  color: #e0e0e0;
+}
+
+.app.dark .form-group input,
+.app.dark .form-group select {
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #e0e0e0;
+}
+
+.app.dark .form-group input:focus,
+.app.dark .form-group select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.app.dark .stat-card {
+  background: #2d2d2d;
+  color: #e0e0e0;
+}
+
+.app.dark .stat-card h3 {
+  color: #b0b0b0;
+}
+
+.app.dark .badge-success {
+  background: #1e4620;
+  color: #81c784;
+}
+
+.app.dark .badge-danger {
+  background: #4a1e1e;
+  color: #e57373;
+}
+
+.app.dark .spinner {
+  border: 4px solid #3a3a3a;
+  border-top: 4px solid #667eea;
+}
+

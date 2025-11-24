@@ -11,10 +11,26 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [darkMode, setDarkMode] = useState(() => {
+    // LocalStorage'dan dark mode tercihini al
+    const saved = localStorage.getItem('darkMode')
+    return saved ? JSON.parse(saved) : false
+  })
 
   useEffect(() => {
     fetchSettings()
   }, [])
+
+  useEffect(() => {
+    // Dark mode'u localStorage'a kaydet
+    localStorage.setItem('darkMode', JSON.stringify(darkMode))
+    // Body'ye class ekle
+    if (darkMode) {
+      document.body.classList.add('dark-mode')
+    } else {
+      document.body.classList.remove('dark-mode')
+    }
+  }, [darkMode])
 
   const fetchSettings = async () => {
     try {
@@ -37,9 +53,18 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${darkMode ? 'dark' : ''}`}>
       <header className="header">
-        <h1>🔍 Google Search Bot</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <h1>🔍 Google Search Bot</h1>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="dark-mode-toggle"
+            title={darkMode ? 'Light Mode' : 'Dark Mode'}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+        </div>
         <nav className="nav">
           <button
             className={activeTab === 'dashboard' ? 'active' : ''}

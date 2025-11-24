@@ -8,10 +8,47 @@ function Reports({ API_BASE }) {
   const [weeklyReports, setWeeklyReports] = useState([])
   const [monthlyReports, setMonthlyReports] = useState([])
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     fetchReports()
   }, [activeTab])
+
+  const handleExport = async (type) => {
+    setExporting(true)
+    try {
+      let url = ''
+      if (type === 'daily') {
+        url = `${API_BASE}/export/excel/daily?days=30`
+      } else if (type === 'summary') {
+        url = `${API_BASE}/export/excel/summary?days=30`
+      } else if (type === 'history') {
+        url = `${API_BASE}/export/excel/position-history?days=30`
+      }
+
+      const response = await axios.get(url, {
+        responseType: 'blob'
+      })
+
+      // Blob'u indir
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      })
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = url.split('/').pop().split('?')[0] + '.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      console.error('Export hatası:', error)
+      alert('Excel export sırasında hata oluştu')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const fetchReports = async () => {
     setLoading(true)
@@ -118,25 +155,53 @@ function Reports({ API_BASE }) {
   return (
     <div>
       <div className="card">
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-          <button
-            className={activeTab === 'daily' ? 'btn' : 'btn btn-secondary'}
-            onClick={() => setActiveTab('daily')}
-          >
-            Günlük Raporlar
-          </button>
-          <button
-            className={activeTab === 'weekly' ? 'btn' : 'btn btn-secondary'}
-            onClick={() => setActiveTab('weekly')}
-          >
-            Haftalık Raporlar
-          </button>
-          <button
-            className={activeTab === 'monthly' ? 'btn' : 'btn btn-secondary'}
-            onClick={() => setActiveTab('monthly')}
-          >
-            Aylık Raporlar
-          </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              className={activeTab === 'daily' ? 'btn' : 'btn btn-secondary'}
+              onClick={() => setActiveTab('daily')}
+            >
+              Günlük Raporlar
+            </button>
+            <button
+              className={activeTab === 'weekly' ? 'btn' : 'btn btn-secondary'}
+              onClick={() => setActiveTab('weekly')}
+            >
+              Haftalık Raporlar
+            </button>
+            <button
+              className={activeTab === 'monthly' ? 'btn' : 'btn btn-secondary'}
+              onClick={() => setActiveTab('monthly')}
+            >
+              Aylık Raporlar
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => handleExport('daily')}
+              disabled={exporting}
+              title="Günlük tüm link pozisyonlarını Excel olarak indir"
+            >
+              {exporting ? '⏳' : '📊'} Günlük Excel
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => handleExport('summary')}
+              disabled={exporting}
+              title="Özet istatistikleri Excel olarak indir"
+            >
+              {exporting ? '⏳' : '📈'} Özet Excel
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => handleExport('history')}
+              disabled={exporting}
+              title="Pozisyon geçmişini Excel olarak indir"
+            >
+              {exporting ? '⏳' : '📉'} Pozisyon Geçmişi
+            </button>
+          </div>
         </div>
 
         <h2>
