@@ -22,15 +22,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoint - EN ÖNCE tanımlanmalı
+# Frontend path'i belirle
+frontend_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
+if not os.path.exists(frontend_path):
+    frontend_path = "/app/frontend/dist"
+
+# Health check endpoint - EN ÖNCE tanımlanmalı (API route'larından önce)
 @app.get("/api/health")
 def health_check():
     """Health check endpoint"""
-    # Frontend path kontrolü
-    frontend_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
-    if not os.path.exists(frontend_path):
-        frontend_path = "/app/frontend/dist"
-    
     frontend_check = os.path.exists(frontend_path)
     index_check = os.path.exists(os.path.join(frontend_path, "index.html")) if frontend_check else False
     
@@ -42,30 +42,19 @@ def health_check():
         "index_exists": index_check
     }
 
-# Frontend static files (production için) - API route'larından ÖNCE mount edilmeli
-# Docker'da frontend /app/frontend/dist olarak kopyalanıyor
-frontend_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
-# Eğer yukarıdaki yoksa, Docker path'ini dene
-if not os.path.exists(frontend_path):
-    frontend_path = "/app/frontend/dist"
-
-# Frontend varsa static dosyaları mount et
-if os.path.exists(frontend_path):
-    assets_path = os.path.join(frontend_path, "assets")
-    if os.path.exists(assets_path):
-        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
-    
-    # Static dosyalar için (CSS, JS, images vb.)
-    static_path = os.path.join(frontend_path)
-    app.mount("/static", StaticFiles(directory=static_path), name="static")
-
-# API routes - Frontend'den SONRA eklenmeli ki API route'ları öncelikli olsun
+# API routes - Health'den SONRA, frontend'den ÖNCE
 app.include_router(search.router)
 app.include_router(settings.router)
 app.include_router(export.router)
 app.include_router(analytics.router)
 
-# Frontend route'ları - EN SON eklenmeli
+# Frontend static files - API route'larından SONRA mount et
+if os.path.exists(frontend_path):
+    assets_path = os.path.join(frontend_path, "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
+# Root route - EN SON eklenmeli (sadece "/" için)
 if os.path.exists(frontend_path):
     index_path = os.path.join(frontend_path, "index.html")
     
@@ -78,28 +67,6 @@ if os.path.exists(frontend_path):
             "docs": "/docs",
             "health": "/api/health",
             "frontend": "Frontend index.html not found"
-        }
-    
-    # SPA için tüm route'ları index.html'e yönlendir (API hariç)
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        # API route'ları zaten yukarıda handle ediliyor, buraya gelmemeli
-        # Ama yine de kontrol edelim
-        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
-            return {"error": "Not found"}
-        
-        # Static dosyalar için
-        if full_path.startswith("assets/") or full_path.startswith("static/"):
-            return {"error": "Static file not found"}
-        
-        # Frontend route'u için index.html döndür
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-        
-        return {
-            "error": "Frontend not found",
-            "api": "/api/health",
-            "docs": "/docs"
         }
 else:
     # Frontend yoksa basit bir mesaj döndür
