@@ -22,6 +22,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Health check endpoint - EN ÖNCE tanımlanmalı
+@app.get("/api/health")
+def health_check():
+    """Health check endpoint"""
+    # Frontend path kontrolü
+    frontend_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
+    if not os.path.exists(frontend_path):
+        frontend_path = "/app/frontend/dist"
+    
+    frontend_check = os.path.exists(frontend_path)
+    index_check = os.path.exists(os.path.join(frontend_path, "index.html")) if frontend_check else False
+    
+    return {
+        "status": "ok",
+        "message": "Google Search Bot is running",
+        "frontend_path": frontend_path,
+        "frontend_exists": frontend_check,
+        "index_exists": index_check
+    }
+
 # Frontend static files (production için) - API route'larından ÖNCE mount edilmeli
 # Docker'da frontend /app/frontend/dist olarak kopyalanıyor
 frontend_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
@@ -110,20 +130,4 @@ async def shutdown_event():
     from app.scheduler import stop_scheduler
     stop_scheduler()
     print("🛑 Google Search Bot durduruldu!")
-
-
-@app.get("/api/health")
-def health_check():
-    """Health check endpoint"""
-    # Frontend path kontrolü
-    frontend_check = os.path.exists(frontend_path) if 'frontend_path' in locals() else False
-    index_check = os.path.exists(os.path.join(frontend_path, "index.html")) if frontend_check else False
-    
-    return {
-        "status": "ok",
-        "message": "Google Search Bot is running",
-        "frontend_path": frontend_path if 'frontend_path' in locals() else "not set",
-        "frontend_exists": frontend_check,
-        "index_exists": index_check
-    }
 
