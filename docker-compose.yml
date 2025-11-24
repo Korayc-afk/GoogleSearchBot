@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: google-search-bot
+    ports:
+      - "8000:8000"
+    environment:
+      - SERPAPI_KEY=bb970a4dea7a4ea4952712cd9bd6d6cb73765f27eee2bcb221bc63c7ba7b6068
+      - DATABASE_URL=sqlite:///./searchbot.db
+    volumes:
+      - ./data:/app/data  # Veritabanı ve loglar için
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+

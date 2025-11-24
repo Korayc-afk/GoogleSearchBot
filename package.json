@@ -1,0 +1,15 @@
+{
+  "name": "google-search-bot",
+  "version": "1.0.0",
+  "description": "Google Search Bot - SerpApi ile otomatik arama ve raporlama sistemi",
+  "scripts": {
+    "dev": "cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  },
+  "keywords": ["google", "search", "bot", "serpapi", "dashboard"],
+  "author": "",
+  "license": "MIT"
+}
+
