@@ -27,10 +27,12 @@ app.include_router(search.router)
 app.include_router(settings.router)
 
 # Frontend static files (production için)
-frontend_path = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
+frontend_path = os.path.join(os.path.dirname(__file__), "../frontend/dist")
 if os.path.exists(frontend_path):
     # Static dosyalar için
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+    assets_path = os.path.join(frontend_path, "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
     
     # Root path için index.html
     @app.get("/")
@@ -38,7 +40,7 @@ if os.path.exists(frontend_path):
         index_path = os.path.join(frontend_path, "index.html")
         if os.path.exists(index_path):
             return FileResponse(index_path)
-        return {"message": "Frontend not built. Run 'npm run build' in frontend directory."}
+        return {"message": "Frontend not built. Run 'npm run build' in frontend directory.", "api": "/api/health"}
     
     # SPA için tüm route'ları index.html'e yönlendir
     @app.get("/{full_path:path}")
@@ -50,7 +52,17 @@ if os.path.exists(frontend_path):
         index_path = os.path.join(frontend_path, "index.html")
         if os.path.exists(index_path):
             return FileResponse(index_path)
-        return {"error": "Frontend not found"}
+        return {"error": "Frontend not found", "api": "/api/health"}
+else:
+    # Frontend yoksa basit bir mesaj döndür
+    @app.get("/")
+    async def read_root():
+        return {
+            "message": "Google Search Bot API",
+            "docs": "/docs",
+            "health": "/api/health",
+            "frontend": "Frontend not built yet"
+        }
 
 
 @app.on_event("startup")
