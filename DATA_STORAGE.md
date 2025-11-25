@@ -46,17 +46,19 @@ Her aramadaki linkleri saklar:
 2. Uygulamanızı seçin
 3. **"Configuration"** veya **"Settings"** sekmesine gidin
 4. **"Persistent Storage"** veya **"Volumes"** bölümünü bulun
-5. Yeni volume ekleyin:
-   - **Container Path**: `/app/data`
-   - **Volume Name**: `searchbot-data` (veya istediğiniz isim)
+5. **"Add Volume"** veya **"+"** butonuna tıklayın
+6. **"Add Volume Mount"** dialog'unda şu ayarları yapın:
+   - **Name**: `searchbot-data` (veya istediğiniz bir isim)
+   - **Source Path**: `/app/data` (container içindeki path)
+   - **Destination Path**: `/app/data` ⚠️ **BU ALAN ÖNEMLİ!** Container içindeki path'i yazın
    - **Size**: En az 1GB (veriler büyüdükçe artırabilirsiniz)
 
 ### Volume Ayarları Detayı:
 
 ```
-Container Path: /app/data
-Volume Name: searchbot-data
-Mount Point: (Coolify otomatik oluşturur)
+Name: searchbot-data
+Source Path: /app/data
+Destination Path: /app/data  ← BU ALAN ÖNEMLİ!
 ```
 
 **Not:** Volume'u ekledikten sonra container'ı yeniden başlatmanız gerekebilir.
