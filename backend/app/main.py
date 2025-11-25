@@ -13,10 +13,53 @@ from app.scheduler import start_scheduler
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Uygulama yaşam döngüsü yönetimi"""
+    # Startup
+    try:
+        logger.info("=" * 60)
+        logger.info("🚀 STARTUP EVENT BAŞLADI")
+        logger.info("=" * 60)
+        logger.info("🚀 Starting Google Search Bot...")
+        
+        # Veritabanını başlat
+        logger.info("📦 Veritabanı başlatılıyor...")
+        init_db()
+        logger.info("✅ Database initialized")
+        
+        # Scheduler'ı başlat
+        logger.info("⏰ Scheduler başlatılıyor...")
+        start_scheduler()
+        logger.info("✅ Scheduler started")
+        
+        logger.info("=" * 60)
+        logger.info("✅ Google Search Bot başlatıldı!")
+        logger.info("=" * 60)
+        print("✅ Google Search Bot başlatıldı!")
+    except Exception as e:
+        logger.error(f"❌ Startup event hatası: {e}", exc_info=True)
+        print(f"❌ Startup event hatası: {e}")
+    
+    yield
+    
+    # Shutdown
+    try:
+        logger.info("🛑 Shutdown event başladı...")
+        from app.scheduler import stop_scheduler
+        stop_scheduler()
+        logger.info("🛑 Google Search Bot durduruldu!")
+        print("🛑 Google Search Bot durduruldu!")
+    except Exception as e:
+        logger.error(f"❌ Shutdown event hatası: {e}", exc_info=True)
+
+
 app = FastAPI(
     title="Google Search Bot API",
     description="SerpApi ile Google arama botu ve dashboard",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS ayarları
