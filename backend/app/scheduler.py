@@ -226,16 +226,19 @@ def start_scheduler():
                 logger.info(f"📅 Son arama: {last_search_date}, Bir sonraki: {start_date}")
             
             # Interval'e göre arama job'u ekle
+            # Eğer start_date varsa, trigger'a start_date ekle
+            trigger = IntervalTrigger(hours=interval_hours, start_date=start_date) if start_date else IntervalTrigger(hours=interval_hours)
+            
             scheduler.add_job(
                 run_scheduled_searches,
-                trigger=IntervalTrigger(hours=interval_hours),
+                trigger=trigger,
                 id="search_job",
-                replace_existing=True,
-                next_run_time=start_date  # İlk çalışma zamanını ayarla
+                replace_existing=True
             )
+            
             logger.info(f"✅ Scheduler başlatıldı - {interval_hours} saatte bir arama yapılacak")
             if start_date:
-                logger.info(f"⏰ İlk arama: {start_date}")
+                logger.info(f"⏰ İlk arama zamanı: {start_date}")
         else:
             # Varsayılan: 12 saatte bir
             scheduler.add_job(
@@ -311,12 +314,14 @@ def update_scheduler_interval(interval_hours: int):
         db.close()
     
     # Yeni interval ile job ekle
+    # Eğer start_date varsa, trigger'a start_date ekle
+    trigger = IntervalTrigger(hours=interval_hours, start_date=start_date) if start_date else IntervalTrigger(hours=interval_hours)
+    
     scheduler.add_job(
         run_scheduled_searches,
-        trigger=IntervalTrigger(hours=interval_hours),
+        trigger=trigger,
         id="search_job",
-        replace_existing=True,
-        next_run_time=start_date  # İlk çalışma zamanını ayarla
+        replace_existing=True
     )
     
     # Eğer scheduler çalışmıyorsa başlat
