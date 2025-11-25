@@ -215,15 +215,20 @@ def start_scheduler():
         if settings:
             interval_hours = settings.interval_hours
             
-            # Eğer son arama varsa, bir sonraki çalışma zamanını hesapla
-            start_date = None
+            # Eğer son arama varsa, interval geçti mi kontrol et
+            should_run_immediately = False
             if last_search_date:
-                # Son aramadan itibaren interval kadar sonra
-                start_date = last_search_date + timedelta(hours=interval_hours)
-                # Eğer geçmişte kaldıysa, şimdiden başlat
-                if start_date < datetime.utcnow():
-                    start_date = datetime.utcnow() + timedelta(minutes=1)  # 1 dakika sonra başlat
-                logger.info(f"📅 Son arama: {last_search_date}, Bir sonraki: {start_date}")
+                time_since_last = (datetime.utcnow() - last_search_date).total_seconds() / 3600
+                logger.info(f"📅 Son arama: {last_search_date} ({time_since_last:.2f} saat önce)")
+                
+                # Eğer interval geçtiyse, hemen çalıştır
+                if time_since_last >= interval_hours:
+                    should_run_immediately = True
+                    logger.info(f"⏰ Son aramadan {time_since_last:.2f} saat geçti (interval: {interval_hours} saat), hemen arama yapılacak...")
+                else:
+                    # Henüz interval geçmedi, bir sonraki zamanı hesapla
+                    start_date = last_search_date + timedelta(hours=interval_hours)
+                    logger.info(f"⏰ Bir sonraki arama: {start_date}")
             
             # Interval'e göre arama job'u ekle
             scheduler.add_job(
@@ -233,21 +238,11 @@ def start_scheduler():
                 replace_existing=True
             )
             
-            # Eğer start_date varsa ve gelecekteyse, job'u reschedule et
-            if start_date and start_date > datetime.utcnow():
-                try:
-                    scheduler.reschedule_job("search_job", trigger=IntervalTrigger(hours=interval_hours, start_date=start_date))
-                    logger.info(f"⏰ İlk arama zamanı ayarlandı: {start_date}")
-                except Exception as e:
-                    logger.warning(f"Job reschedule edilirken hata (start_date kullanılamıyor olabilir): {e}")
-                    # Alternatif: Eğer son aramadan itibaren interval geçtiyse, hemen çalıştır
-                    if last_search_date:
-                        time_since_last = (datetime.utcnow() - last_search_date).total_seconds() / 3600
-                        if time_since_last >= interval_hours:
-                            logger.info(f"⏰ Son aramadan {time_since_last:.1f} saat geçti, hemen arama yapılıyor...")
-                            # Hemen bir arama yap
-                            import threading
-                            threading.Thread(target=run_scheduled_searches, daemon=True).start()
+            # Eğer hemen çalıştırılması gerekiyorsa
+            if should_run_immediately:
+                logger.info("🚀 Hemen arama yapılıyor...")
+                import threading
+                threading.Thread(target=run_scheduled_searches, daemon=True).start()
             
             logger.info(f"✅ Scheduler başlatıldı - {interval_hours} saatte bir arama yapılacak")
         else:
@@ -281,6 +276,12 @@ def start_scheduler():
     
     scheduler.start()
     logger.info(f"🚀 Scheduler başlatıldı - Running: {scheduler.running}")
+    
+    # Job'ları kontrol et ve logla
+    jobs = scheduler.get_jobs()
+    logger.info(f"📋 Toplam {len(jobs)} job eklendi:")
+    for job in jobs:
+        logger.info(f"  - {job.id}: {job.trigger} -> Next run: {job.next_run_time}")
 
 
 def stop_scheduler():
@@ -308,19 +309,16 @@ def update_scheduler_interval(interval_hours: int):
         last_result = db.query(SearchResult).order_by(SearchResult.search_date.desc()).first()
         last_search_date = last_result.search_date if last_result else None
         
-        # Eğer son arama varsa, bir sonraki çalışma zamanını hesapla
-        start_date = None
+        # Eğer son arama varsa, interval geçti mi kontrol et
+        should_run_immediately = False
         if last_search_date:
-            # Son aramadan itibaren interval kadar sonra
-            start_date = last_search_date + timedelta(hours=interval_hours)
-            # Eğer geçmişte kaldıysa, şimdiden başlat
-            if start_date < datetime.utcnow():
-                start_date = datetime.utcnow() + timedelta(minutes=1)  # 1 dakika sonra başlat
-            logger.info(f"📅 Son arama: {last_search_date}, Bir sonraki: {start_date}")
-        else:
-            # İlk arama için 1 dakika sonra başlat
-            start_date = datetime.utcnow() + timedelta(minutes=1)
-            logger.info(f"📅 İlk arama için: {start_date}")
+            time_since_last = (datetime.utcnow() - last_search_date).total_seconds() / 3600
+            logger.info(f"📅 Son arama: {last_search_date} ({time_since_last:.2f} saat önce)")
+            
+            # Eğer interval geçtiyse, hemen çalıştır
+            if time_since_last >= interval_hours:
+                should_run_immediately = True
+                logger.info(f"⏰ Son aramadan {time_since_last:.2f} saat geçti (interval: {interval_hours} saat), hemen arama yapılacak...")
     finally:
         db.close()
     
@@ -332,21 +330,11 @@ def update_scheduler_interval(interval_hours: int):
         replace_existing=True
     )
     
-    # Eğer start_date varsa ve gelecekteyse, job'u reschedule et
-    if start_date and start_date > datetime.utcnow():
-        try:
-            scheduler.reschedule_job("search_job", trigger=IntervalTrigger(hours=interval_hours, start_date=start_date))
-            logger.info(f"⏰ Bir sonraki arama zamanı ayarlandı: {start_date}")
-        except Exception as e:
-            logger.warning(f"Job reschedule edilirken hata (start_date kullanılamıyor olabilir): {e}")
-            # Alternatif: Eğer son aramadan itibaren interval geçtiyse, hemen çalıştır
-            if last_search_date:
-                time_since_last = (datetime.utcnow() - last_search_date).total_seconds() / 3600
-                if time_since_last >= interval_hours:
-                    logger.info(f"⏰ Son aramadan {time_since_last:.1f} saat geçti, hemen arama yapılıyor...")
-                    # Hemen bir arama yap
-                    import threading
-                    threading.Thread(target=run_scheduled_searches, daemon=True).start()
+    # Eğer hemen çalıştırılması gerekiyorsa
+    if should_run_immediately:
+        logger.info("🚀 Hemen arama yapılıyor...")
+        import threading
+        threading.Thread(target=run_scheduled_searches, daemon=True).start()
     
     # Eğer scheduler çalışmıyorsa başlat
     if not scheduler.running:
