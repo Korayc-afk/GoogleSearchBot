@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from contextlib import asynccontextmanager
 import os
 import logging
 from app.database import init_db
@@ -138,46 +139,4 @@ else:
         }
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Uygulama başlatıldığında çalışır"""
-    try:
-        logger.info("=" * 60)
-        logger.info("🚀 STARTUP EVENT BAŞLADI")
-        logger.info("=" * 60)
-        logger.info("🚀 Starting Google Search Bot...")
-        logger.info(f"📁 Frontend path: {frontend_path}")
-        logger.info(f"📁 Frontend exists: {os.path.exists(frontend_path)}")
-        
-        # Veritabanını başlat
-        logger.info("📦 Veritabanı başlatılıyor...")
-        init_db()
-        logger.info("✅ Database initialized")
-        
-        # Scheduler'ı başlat
-        logger.info("⏰ Scheduler başlatılıyor...")
-        start_scheduler()
-        logger.info("✅ Scheduler started")
-        
-        # Route'ları logla
-        logger.info("📋 Registered routes:")
-        for route in app.routes:
-            if hasattr(route, 'path') and hasattr(route, 'methods'):
-                logger.info(f"  {list(route.methods)} {route.path}")
-        
-        logger.info("=" * 60)
-        logger.info("✅ Google Search Bot başlatıldı!")
-        logger.info("=" * 60)
-        print("✅ Google Search Bot başlatıldı!")
-    except Exception as e:
-        logger.error(f"❌ Startup event hatası: {e}", exc_info=True)
-        print(f"❌ Startup event hatası: {e}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Uygulama kapatıldığında çalışır"""
-    from app.scheduler import stop_scheduler
-    stop_scheduler()
-    print("🛑 Google Search Bot durduruldu!")
 
