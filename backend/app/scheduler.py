@@ -188,18 +188,45 @@ def run_scheduled_searches():
 
 
 def start_scheduler():
-    """Scheduler'ı başlatır"""
+    """Scheduler'ı başlatır - veritabanındaki interval_hours ayarına göre"""
     if scheduler.running:
         logger.warning("Scheduler zaten çalışıyor")
         return
     
-    # Her saat başı çalışacak şekilde ayarla (24 saatte 24 kez)
-    scheduler.add_job(
-        run_scheduled_searches,
-        trigger=CronTrigger(minute=0),  # Her saat başı (0. dakikada)
-        id="search_job",
-        replace_existing=True
-    )
+    # Veritabanından interval_hours ayarını al
+    db = SessionLocal()
+    try:
+        settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
+        if settings:
+            interval_hours = settings.interval_hours
+            # Interval'e göre arama job'u ekle
+            scheduler.add_job(
+                run_scheduled_searches,
+                trigger=IntervalTrigger(hours=interval_hours),
+                id="search_job",
+                replace_existing=True
+            )
+            logger.info(f"Scheduler başlatıldı - {interval_hours} saatte bir arama yapılacak")
+        else:
+            # Varsayılan: 12 saatte bir
+            scheduler.add_job(
+                run_scheduled_searches,
+                trigger=IntervalTrigger(hours=12),
+                id="search_job",
+                replace_existing=True
+            )
+            logger.info("Scheduler başlatıldı - Varsayılan: 12 saatte bir arama yapılacak")
+    except Exception as e:
+        logger.error(f"Scheduler başlatılırken hata: {e}")
+        # Hata durumunda varsayılan değer
+        scheduler.add_job(
+            run_scheduled_searches,
+            trigger=IntervalTrigger(hours=12),
+            id="search_job",
+            replace_existing=True
+        )
+    finally:
+        db.close()
     
     # Her gün saat 09:00'da günlük özet email gönder
     scheduler.add_job(
@@ -210,7 +237,6 @@ def start_scheduler():
     )
     
     scheduler.start()
-    logger.info("Scheduler başlatıldı - Her saat başı arama yapılacak (24 saatte 24 kez), günlük özet 09:00'da gönderilecek")
 
 
 def stop_scheduler():
@@ -221,8 +247,25 @@ def stop_scheduler():
 
 
 def update_scheduler_interval(interval_hours: int):
-    """Scheduler interval'ını günceller (kullanılmıyor - artık her saat başı çalışıyor)"""
-    # Not: Artık her saat başı çalışacak şekilde ayarlandı
-    # Bu fonksiyon geriye dönük uyumluluk için bırakıldı
-    logger.warning("update_scheduler_interval kullanılmıyor - scheduler her saat başı çalışıyor")
+    """Scheduler interval'ını günceller"""
+    # Mevcut job'u kaldır
+    if scheduler.running:
+        try:
+            scheduler.remove_job("search_job")
+        except:
+            pass
+    
+    # Yeni interval ile job ekle
+    scheduler.add_job(
+        run_scheduled_searches,
+        trigger=IntervalTrigger(hours=interval_hours),
+        id="search_job",
+        replace_existing=True
+    )
+    
+    # Eğer scheduler çalışmıyorsa başlat
+    if not scheduler.running:
+        scheduler.start()
+    
+    logger.info(f"Scheduler güncellendi - {interval_hours} saatte bir arama yapılacak")
 

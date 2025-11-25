@@ -53,9 +53,10 @@ Veritabanı dosyasının kalıcı olması için:
 2. **"Configuration"** veya **"Settings"** sekmesine gidin
 3. **"Persistent Storage"** veya **"Volumes"** bölümünü bulun
 4. **"Add Volume"** veya **"+"** butonuna tıklayın
-5. Şu ayarları yapın:
-   - **Container Path**: `/app/data`
-   - **Volume Name**: `searchbot-data` (veya istediğiniz bir isim)
+5. **"Add Volume Mount"** dialog'unda şu ayarları yapın:
+   - **Name**: `searchbot-data` (veya istediğiniz bir isim)
+   - **Source Path**: `/app/data` (container içindeki path)
+   - **Destination Path**: `/app/data` ⚠️ **BU ALAN ÖNEMLİ!** Container içindeki path'i yazın
    - **Size**: En az `1GB` (veriler büyüdükçe artırabilirsiniz)
 
 **Not:** Volume ekledikten sonra container'ı yeniden başlatmanız gerekebilir.
@@ -88,7 +89,7 @@ Coolify otomatik olarak health check yapacak:
 4. Arama parametrelerini yapılandırın:
    - **Aranacak Kelime**: `padişah bet` (veya istediğiniz, virgülle ayrılmış çoklu kelime desteklenir)
    - **Konum**: `Fatih,Istanbul` veya `Istanbul`
-   - **Interval**: Artık kullanılmıyor - Bot **her saat başı otomatik** arama yapacak (24 saatte 24 kez)
+   - **Interval (Saat)**: Botun kaç saatte bir arama yapacağını belirler (örn: 12 = 12 saatte bir, 24 = 24 saatte bir)
 5. **"Ayarları Kaydet"** butonuna tıklayın
 6. **"Test Araması Yap"** ile sistemin çalıştığını doğrulayın
 
