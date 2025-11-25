@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 
 function Dashboard({ API_BASE }) {
   const [results, setResults] = useState([])
@@ -83,7 +84,7 @@ function Dashboard({ API_BASE }) {
               <div>
                 <strong>Son Arama:</strong>
                 <div style={{ marginTop: '5px', fontSize: '14px' }}>
-                  {format(new Date(schedulerStatus.last_search_date), 'dd MMM yyyy HH:mm')}
+                  {formatInTimeZone(new Date(schedulerStatus.last_search_date), 'Europe/Istanbul', 'dd MMM yyyy HH:mm')} (TR)
                 </div>
               </div>
             )}
@@ -91,7 +92,7 @@ function Dashboard({ API_BASE }) {
               <div>
                 <strong>Bir Sonraki Arama:</strong>
                 <div style={{ marginTop: '5px', fontSize: '14px', color: '#667eea', fontWeight: 'bold' }}>
-                  {format(new Date(schedulerStatus.next_run_time), 'dd MMM yyyy HH:mm')}
+                  {formatInTimeZone(new Date(schedulerStatus.next_run_time), 'Europe/Istanbul', 'dd MMM yyyy HH:mm')} (TR)
                 </div>
               </div>
             )}
@@ -141,7 +142,7 @@ function Dashboard({ API_BASE }) {
               {results.map((result) => (
                 <tr key={result.id}>
                   <td>
-                    {format(new Date(result.search_date), 'dd MMM yyyy HH:mm')}
+                    {formatInTimeZone(new Date(result.search_date), 'Europe/Istanbul', 'dd MMM yyyy HH:mm')} (TR)
                   </td>
                   <td>{result.total_results.toLocaleString()}</td>
                   <td>{result.links?.length || 0}</td>
