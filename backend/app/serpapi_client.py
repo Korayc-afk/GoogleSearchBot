@@ -100,3 +100,4 @@ class SerpApiClient:
         except:
             return ""
 
+

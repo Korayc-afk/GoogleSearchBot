@@ -97,3 +97,4 @@ class ApiResponse(BaseModel):
     message: str
     data: Optional[dict] = None
 
+

@@ -49,3 +49,4 @@ Email ayarlarını test etmek için:
 - Email gönderilemezse loglarda hata görünecektir
 - Production'da email gönderimi için güvenli SMTP kullanın
 
+

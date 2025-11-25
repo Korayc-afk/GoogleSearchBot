@@ -43,14 +43,24 @@ Coolify'da environment variable'ları eklemek için:
 - ✅ Variable'ları ekledikten sonra **"Save"** veya **"Deploy"** butonuna tıklayın
 - ✅ Production ve Staging environment'ları için ayrı variable'lar tanımlayabilirsiniz
 
-## Adım 4: Volume Ayarları (Veritabanı için)
+## Adım 4: Persistent Storage Ayarları (VERİLER İÇİN ÇOK ÖNEMLİ! ⚠️)
+
+**⚠️ UYARI:** Persistent Storage ayarlanmazsa, container silindiğinde TÜM VERİLER KAYBOLUR!
 
 Veritabanı dosyasının kalıcı olması için:
 
-1. Uygulama ayarlarında **"Volumes"** veya **"Storage"** bölümüne gidin
-2. Yeni volume ekleyin:
-   - **Path**: `/app/data`
-   - **Name**: `searchbot-data` (veya istediğiniz bir isim)
+1. Coolify Dashboard'da uygulamanızı seçin
+2. **"Configuration"** veya **"Settings"** sekmesine gidin
+3. **"Persistent Storage"** veya **"Volumes"** bölümünü bulun
+4. **"Add Volume"** veya **"+"** butonuna tıklayın
+5. Şu ayarları yapın:
+   - **Container Path**: `/app/data`
+   - **Volume Name**: `searchbot-data` (veya istediğiniz bir isim)
+   - **Size**: En az `1GB` (veriler büyüdükçe artırabilirsiniz)
+
+**Not:** Volume ekledikten sonra container'ı yeniden başlatmanız gerekebilir.
+
+**Detaylı bilgi için:** `DATA_STORAGE.md` dosyasına bakın.
 
 ## Adım 5: Port Ayarları
 
@@ -76,9 +86,9 @@ Coolify otomatik olarak health check yapacak:
 2. Dashboard açılacak
 3. **Ayarlar** sekmesine gidin
 4. Arama parametrelerini yapılandırın:
-   - **Aranacak Kelime**: `padişah bet` (veya istediğiniz)
+   - **Aranacak Kelime**: `padişah bet` (veya istediğiniz, virgülle ayrılmış çoklu kelime desteklenir)
    - **Konum**: `Fatih,Istanbul` veya `Istanbul`
-   - **Interval**: `12` saat
+   - **Interval**: Artık kullanılmıyor - Bot **her saat başı otomatik** arama yapacak (24 saatte 24 kez)
 5. **"Ayarları Kaydet"** butonuna tıklayın
 6. **"Test Araması Yap"** ile sistemin çalıştığını doğrulayın
 

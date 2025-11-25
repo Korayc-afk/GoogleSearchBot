@@ -26,3 +26,4 @@ trap "kill $BACKEND_PID $FRONTEND_PID" EXIT
 # Bekle
 wait
 
+
