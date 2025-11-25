@@ -51,7 +51,7 @@ Her aramadaki linkleri saklar:
    - **Name**: `searchbot-data` (veya istediğiniz bir isim)
    - **Source Path**: `/app/data` (container içindeki path)
    - **Destination Path**: `/app/data` ⚠️ **BU ALAN ÖNEMLİ!** Container içindeki path'i yazın
-   - **Size**: En az 1GB (veriler büyüdükçe artırabilirsiniz)
+   - **Size**: (Opsiyonel - Bazı Coolify versiyonlarında otomatik ayarlanır veya görünmeyebilir. Eğer görünüyorsa en az 1GB ayarlayın)
 
 ### Volume Ayarları Detayı:
 
