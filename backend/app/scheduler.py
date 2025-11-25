@@ -161,15 +161,23 @@ def run_daily_summary():
 
 def run_scheduled_searches():
     """Tüm aktif ayarlar için arama yapar (çoklu kelime desteği ile)"""
+    logger.info("=" * 50)
+    logger.info(f"⏰ Zamanlanmış arama tetiklendi: {datetime.utcnow()}")
+    logger.info("=" * 50)
+    
     db = SessionLocal()
     try:
         settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
         
         if settings:
+            logger.info(f"📋 Ayar bulundu: {settings.search_query} - {settings.location} (Interval: {settings.interval_hours} saat)")
+            
             # Çoklu arama kelimesi desteği (virgülle ayrılmış)
             queries = [q.strip() for q in settings.search_query.split(',') if q.strip()]
+            logger.info(f"🔍 {len(queries)} kelime için arama yapılacak")
             
             for query in queries:
+                logger.info(f"🔎 Arama başlatılıyor: '{query}'")
                 # Geçici settings objesi oluştur
                 temp_settings = SearchSettings(
                     id=settings.id,
@@ -179,12 +187,14 @@ def run_scheduled_searches():
                     interval_hours=settings.interval_hours
                 )
                 perform_search(db, temp_settings)
+                logger.info(f"✅ '{query}' araması tamamlandı")
         else:
-            logger.warning("Aktif arama ayarı bulunamadı")
+            logger.warning("⚠️ Aktif arama ayarı bulunamadı")
     except Exception as e:
-        logger.error(f"Zamanlanmış arama hatası: {str(e)}")
+        logger.error(f"❌ Zamanlanmış arama hatası: {str(e)}", exc_info=True)
     finally:
         db.close()
+        logger.info("=" * 50)
 
 
 def start_scheduler():
@@ -197,16 +207,35 @@ def start_scheduler():
     db = SessionLocal()
     try:
         settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
+        
+        # Son arama zamanını kontrol et
+        last_result = db.query(SearchResult).order_by(SearchResult.search_date.desc()).first()
+        last_search_date = last_result.search_date if last_result else None
+        
         if settings:
             interval_hours = settings.interval_hours
+            
+            # Eğer son arama varsa, bir sonraki çalışma zamanını hesapla
+            start_date = None
+            if last_search_date:
+                # Son aramadan itibaren interval kadar sonra
+                start_date = last_search_date + timedelta(hours=interval_hours)
+                # Eğer geçmişte kaldıysa, şimdiden başlat
+                if start_date < datetime.utcnow():
+                    start_date = datetime.utcnow() + timedelta(minutes=1)  # 1 dakika sonra başlat
+                logger.info(f"📅 Son arama: {last_search_date}, Bir sonraki: {start_date}")
+            
             # Interval'e göre arama job'u ekle
             scheduler.add_job(
                 run_scheduled_searches,
                 trigger=IntervalTrigger(hours=interval_hours),
                 id="search_job",
-                replace_existing=True
+                replace_existing=True,
+                next_run_time=start_date  # İlk çalışma zamanını ayarla
             )
-            logger.info(f"Scheduler başlatıldı - {interval_hours} saatte bir arama yapılacak")
+            logger.info(f"✅ Scheduler başlatıldı - {interval_hours} saatte bir arama yapılacak")
+            if start_date:
+                logger.info(f"⏰ İlk arama: {start_date}")
         else:
             # Varsayılan: 12 saatte bir
             scheduler.add_job(
@@ -215,9 +244,9 @@ def start_scheduler():
                 id="search_job",
                 replace_existing=True
             )
-            logger.info("Scheduler başlatıldı - Varsayılan: 12 saatte bir arama yapılacak")
+            logger.info("✅ Scheduler başlatıldı - Varsayılan: 12 saatte bir arama yapılacak")
     except Exception as e:
-        logger.error(f"Scheduler başlatılırken hata: {e}")
+        logger.error(f"❌ Scheduler başlatılırken hata: {e}", exc_info=True)
         # Hata durumunda varsayılan değer
         scheduler.add_job(
             run_scheduled_searches,
@@ -237,6 +266,7 @@ def start_scheduler():
     )
     
     scheduler.start()
+    logger.info(f"🚀 Scheduler başlatıldı - Running: {scheduler.running}")
 
 
 def stop_scheduler():
@@ -248,24 +278,53 @@ def stop_scheduler():
 
 def update_scheduler_interval(interval_hours: int):
     """Scheduler interval'ını günceller"""
+    logger.info(f"🔄 Scheduler interval güncelleniyor: {interval_hours} saat")
+    
     # Mevcut job'u kaldır
     if scheduler.running:
         try:
             scheduler.remove_job("search_job")
-        except:
-            pass
+            logger.info("🗑️ Eski job kaldırıldı")
+        except Exception as e:
+            logger.warning(f"Eski job kaldırılırken hata: {e}")
+    
+    # Son arama zamanını kontrol et
+    db = SessionLocal()
+    try:
+        last_result = db.query(SearchResult).order_by(SearchResult.search_date.desc()).first()
+        last_search_date = last_result.search_date if last_result else None
+        
+        # Eğer son arama varsa, bir sonraki çalışma zamanını hesapla
+        start_date = None
+        if last_search_date:
+            # Son aramadan itibaren interval kadar sonra
+            start_date = last_search_date + timedelta(hours=interval_hours)
+            # Eğer geçmişte kaldıysa, şimdiden başlat
+            if start_date < datetime.utcnow():
+                start_date = datetime.utcnow() + timedelta(minutes=1)  # 1 dakika sonra başlat
+            logger.info(f"📅 Son arama: {last_search_date}, Bir sonraki: {start_date}")
+        else:
+            # İlk arama için 1 dakika sonra başlat
+            start_date = datetime.utcnow() + timedelta(minutes=1)
+            logger.info(f"📅 İlk arama için: {start_date}")
+    finally:
+        db.close()
     
     # Yeni interval ile job ekle
     scheduler.add_job(
         run_scheduled_searches,
         trigger=IntervalTrigger(hours=interval_hours),
         id="search_job",
-        replace_existing=True
+        replace_existing=True,
+        next_run_time=start_date  # İlk çalışma zamanını ayarla
     )
     
     # Eğer scheduler çalışmıyorsa başlat
     if not scheduler.running:
         scheduler.start()
+        logger.info("🚀 Scheduler başlatıldı")
     
-    logger.info(f"Scheduler güncellendi - {interval_hours} saatte bir arama yapılacak")
+    logger.info(f"✅ Scheduler güncellendi - {interval_hours} saatte bir arama yapılacak")
+    if start_date:
+        logger.info(f"⏰ Bir sonraki arama: {start_date}")
 

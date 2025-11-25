@@ -50,3 +50,4 @@ Email ayarlarını test etmek için:
 - Production'da email gönderimi için güvenli SMTP kullanın
 
 
+

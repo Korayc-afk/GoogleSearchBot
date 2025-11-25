@@ -119,12 +119,31 @@ def get_scheduler_status(db: Session = Depends(get_db)):
             job = scheduler.get_job("search_job")
             if job:
                 next_run_time = job.next_run_time
-                # Son çalışma zamanını hesapla
+                # Son çalışma zamanını hesapla (next_run_time'dan interval çıkar)
                 if next_run_time and settings.interval_hours:
                     from datetime import timedelta
                     last_run_time = next_run_time - timedelta(hours=settings.interval_hours)
-        except:
-            pass
+                    
+                    # Eğer hesaplanan last_run_time, gerçek last_search_date'den farklıysa
+                    # next_run_time'ı last_search_date'den hesapla
+                    if last_search_date:
+                        # Son aramadan itibaren interval kadar sonra olmalı
+                        expected_next = last_search_date + timedelta(hours=settings.interval_hours)
+                        # Eğer beklenen zaman geçmişteyse, şimdiden itibaren hesapla
+                        if expected_next < datetime.utcnow():
+                            expected_next = datetime.utcnow() + timedelta(hours=settings.interval_hours)
+                        # Eğer job'un next_run_time'ı beklenenden çok farklıysa, düzelt
+                        if abs((next_run_time - expected_next).total_seconds()) > 300:  # 5 dakikadan fazla fark
+                            next_run_time = expected_next
+                            last_run_time = last_search_date
+        except Exception as e:
+            # Hata durumunda, last_search_date'den hesapla
+            if last_search_date and settings.interval_hours:
+                from datetime import timedelta
+                next_run_time = last_search_date + timedelta(hours=settings.interval_hours)
+                if next_run_time < datetime.utcnow():
+                    next_run_time = datetime.utcnow() + timedelta(hours=settings.interval_hours)
+                last_run_time = last_search_date
     
     # Toplam zamanlanmış çalışma sayısı (tahmini)
     total_runs = 0
