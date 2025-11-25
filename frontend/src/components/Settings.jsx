@@ -87,7 +87,7 @@ function Settings({ API_BASE, settings, onUpdate }) {
             required
           />
           <small style={{ color: '#666', display: 'block', marginTop: '0.25rem' }}>
-            Çoklu kelime için virgülle ayırın: "padişah bet, bahis, casino"
+            Çoklu kelime için virgülle ayırın: "xxx, yyy, zzz"
           </small>
         </div>
 
