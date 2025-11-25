@@ -141,25 +141,37 @@ else:
 @app.on_event("startup")
 async def startup_event():
     """Uygulama başlatıldığında çalışır"""
-    logger.info("🚀 Starting Google Search Bot...")
-    logger.info(f"📁 Frontend path: {frontend_path}")
-    logger.info(f"📁 Frontend exists: {os.path.exists(frontend_path)}")
-    
-    # Veritabanını başlat
-    init_db()
-    logger.info("✅ Database initialized")
-    
-    # Scheduler'ı başlat
-    start_scheduler()
-    logger.info("✅ Scheduler started")
-    
-    # Route'ları logla
-    logger.info("📋 Registered routes:")
-    for route in app.routes:
-        if hasattr(route, 'path') and hasattr(route, 'methods'):
-            logger.info(f"  {list(route.methods)} {route.path}")
-    
-    print("✅ Google Search Bot başlatıldı!")
+    try:
+        logger.info("=" * 60)
+        logger.info("🚀 STARTUP EVENT BAŞLADI")
+        logger.info("=" * 60)
+        logger.info("🚀 Starting Google Search Bot...")
+        logger.info(f"📁 Frontend path: {frontend_path}")
+        logger.info(f"📁 Frontend exists: {os.path.exists(frontend_path)}")
+        
+        # Veritabanını başlat
+        logger.info("📦 Veritabanı başlatılıyor...")
+        init_db()
+        logger.info("✅ Database initialized")
+        
+        # Scheduler'ı başlat
+        logger.info("⏰ Scheduler başlatılıyor...")
+        start_scheduler()
+        logger.info("✅ Scheduler started")
+        
+        # Route'ları logla
+        logger.info("📋 Registered routes:")
+        for route in app.routes:
+            if hasattr(route, 'path') and hasattr(route, 'methods'):
+                logger.info(f"  {list(route.methods)} {route.path}")
+        
+        logger.info("=" * 60)
+        logger.info("✅ Google Search Bot başlatıldı!")
+        logger.info("=" * 60)
+        print("✅ Google Search Bot başlatıldı!")
+    except Exception as e:
+        logger.error(f"❌ Startup event hatası: {e}", exc_info=True)
+        print(f"❌ Startup event hatası: {e}")
 
 
 @app.on_event("shutdown")

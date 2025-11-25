@@ -7,7 +7,7 @@ from app.models import (
     SearchSettingsResponse, SearchSettingsCreate, SearchSettingsUpdate,
     SchedulerStatusResponse
 )
-from app.scheduler import update_scheduler_interval, start_scheduler, stop_scheduler, scheduler
+from app.scheduler import update_scheduler_interval, start_scheduler, stop_scheduler, scheduler, run_scheduled_searches
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -161,5 +161,39 @@ def get_scheduler_status(db: Session = Depends(get_db)):
         last_search_date=last_search_date,
         total_scheduled_runs=total_runs
     )
+
+
+@router.post("/scheduler/restart")
+def restart_scheduler():
+    """Scheduler'ı yeniden başlatır"""
+    try:
+        # Önce durdur
+        if scheduler.running:
+            stop_scheduler()
+        
+        # Sonra başlat
+        start_scheduler()
+        
+        return {
+            "success": True,
+            "message": "Scheduler yeniden başlatıldı",
+            "is_running": scheduler.running
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Scheduler yeniden başlatılırken hata: {str(e)}")
+
+
+@router.post("/scheduler/run-now")
+def run_search_now_manual():
+    """Manuel olarak hemen arama yapar"""
+    try:
+        import threading
+        threading.Thread(target=run_scheduled_searches, daemon=True).start()
+        return {
+            "success": True,
+            "message": "Arama başlatıldı"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Arama başlatılırken hata: {str(e)}")
 
 
