@@ -98,3 +98,14 @@ class ApiResponse(BaseModel):
     data: Optional[dict] = None
 
 
+# Scheduler Status Model
+class SchedulerStatusResponse(BaseModel):
+    is_running: bool
+    is_enabled: bool
+    interval_hours: int
+    last_run_time: Optional[datetime] = None
+    next_run_time: Optional[datetime] = None
+    last_search_date: Optional[datetime] = None
+    total_scheduled_runs: int = 0
+
+

@@ -6,6 +6,7 @@ function Dashboard({ API_BASE }) {
   const [results, setResults] = useState([])
   const [linkStats, setLinkStats] = useState([])
   const [loading, setLoading] = useState(true)
+  const [schedulerStatus, setSchedulerStatus] = useState(null)
   const [stats, setStats] = useState({
     totalSearches: 0,
     totalLinks: 0,
@@ -20,13 +21,15 @@ function Dashboard({ API_BASE }) {
 
   const fetchData = async () => {
     try {
-      const [resultsRes, linksRes] = await Promise.all([
+      const [resultsRes, linksRes, schedulerRes] = await Promise.all([
         axios.get(`${API_BASE}/search/results?limit=10`),
-        axios.get(`${API_BASE}/search/links/stats?days=7&limit=10`)
+        axios.get(`${API_BASE}/search/links/stats?days=7&limit=10`),
+        axios.get(`${API_BASE}/settings/scheduler-status`)
       ])
 
       setResults(resultsRes.data)
       setLinkStats(linksRes.data)
+      setSchedulerStatus(schedulerRes.data)
 
       // İstatistikleri hesapla
       const uniqueDomains = new Set(
@@ -51,6 +54,61 @@ function Dashboard({ API_BASE }) {
 
   return (
     <div>
+      {/* Scheduler Durumu */}
+      {schedulerStatus && (
+        <div className="card" style={{ marginBottom: '20px', border: schedulerStatus.is_running && schedulerStatus.is_enabled ? '2px solid #10b981' : '2px solid #ef4444' }}>
+          <h2>⏰ Otomatik Arama Durumu</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
+            <div>
+              <strong>Durum:</strong>
+              <div style={{ 
+                display: 'inline-block', 
+                marginLeft: '10px',
+                padding: '4px 12px',
+                borderRadius: '4px',
+                backgroundColor: schedulerStatus.is_running && schedulerStatus.is_enabled ? '#10b981' : '#ef4444',
+                color: 'white',
+                fontWeight: 'bold'
+              }}>
+                {schedulerStatus.is_running && schedulerStatus.is_enabled ? '✅ Aktif' : '❌ Pasif'}
+              </div>
+            </div>
+            <div>
+              <strong>Arama Sıklığı:</strong>
+              <div style={{ marginTop: '5px', fontSize: '18px', fontWeight: 'bold' }}>
+                {schedulerStatus.interval_hours} saatte bir
+              </div>
+            </div>
+            {schedulerStatus.last_search_date && (
+              <div>
+                <strong>Son Arama:</strong>
+                <div style={{ marginTop: '5px', fontSize: '14px' }}>
+                  {format(new Date(schedulerStatus.last_search_date), 'dd MMM yyyy HH:mm')}
+                </div>
+              </div>
+            )}
+            {schedulerStatus.next_run_time && (
+              <div>
+                <strong>Bir Sonraki Arama:</strong>
+                <div style={{ marginTop: '5px', fontSize: '14px', color: '#667eea', fontWeight: 'bold' }}>
+                  {format(new Date(schedulerStatus.next_run_time), 'dd MMM yyyy HH:mm')}
+                </div>
+              </div>
+            )}
+          </div>
+          {!schedulerStatus.is_running && schedulerStatus.is_enabled && (
+            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#fef3c7', borderRadius: '4px', color: '#92400e' }}>
+              ⚠️ Scheduler ayarlı ancak çalışmıyor. Lütfen container'ı yeniden başlatın veya ayarları kontrol edin.
+            </div>
+          )}
+          {!schedulerStatus.is_enabled && (
+            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#fee2e2', borderRadius: '4px', color: '#991b1b' }}>
+              ⚠️ Otomatik arama devre dışı. Ayarlar sayfasından etkinleştirebilirsiniz.
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="stats-grid">
         <div className="stat-card">
           <h3>Toplam Arama</h3>

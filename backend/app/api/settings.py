@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db, SearchSettings
+from sqlalchemy import func
+from datetime import datetime
+from app.database import get_db, SearchSettings, SearchResult
 from app.models import (
-    SearchSettingsResponse, SearchSettingsCreate, SearchSettingsUpdate
+    SearchSettingsResponse, SearchSettingsCreate, SearchSettingsUpdate,
+    SchedulerStatusResponse
 )
-from app.scheduler import update_scheduler_interval, start_scheduler, stop_scheduler
+from app.scheduler import update_scheduler_interval, start_scheduler, stop_scheduler, scheduler
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -86,5 +89,58 @@ def create_settings(
         update_scheduler_interval(settings.interval_hours)
     
     return settings
+
+
+@router.get("/scheduler-status", response_model=SchedulerStatusResponse)
+def get_scheduler_status(db: Session = Depends(get_db)):
+    """Scheduler durumunu getirir"""
+    settings = db.query(SearchSettings).first()
+    
+    if not settings:
+        return SchedulerStatusResponse(
+            is_running=False,
+            is_enabled=False,
+            interval_hours=12,
+            total_scheduled_runs=0
+        )
+    
+    # Scheduler durumu
+    is_running = scheduler.running if scheduler else False
+    
+    # Son arama zamanı
+    last_result = db.query(SearchResult).order_by(SearchResult.search_date.desc()).first()
+    last_search_date = last_result.search_date if last_result else None
+    
+    # Bir sonraki çalışma zamanı
+    next_run_time = None
+    last_run_time = None
+    if is_running:
+        try:
+            job = scheduler.get_job("search_job")
+            if job:
+                next_run_time = job.next_run_time
+                # Son çalışma zamanını hesapla
+                if next_run_time and settings.interval_hours:
+                    from datetime import timedelta
+                    last_run_time = next_run_time - timedelta(hours=settings.interval_hours)
+        except:
+            pass
+    
+    # Toplam zamanlanmış çalışma sayısı (tahmini)
+    total_runs = 0
+    if last_search_date and settings.interval_hours:
+        # İlk aramadan bu yana geçen süre / interval
+        time_diff = datetime.utcnow() - last_search_date
+        total_runs = int(time_diff.total_seconds() / 3600 / settings.interval_hours) + 1
+    
+    return SchedulerStatusResponse(
+        is_running=is_running,
+        is_enabled=settings.enabled,
+        interval_hours=settings.interval_hours,
+        last_run_time=last_run_time,
+        next_run_time=next_run_time,
+        last_search_date=last_search_date,
+        total_scheduled_runs=total_runs
+    )
 
 
