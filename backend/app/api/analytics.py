@@ -153,6 +153,9 @@ def get_top_movers(
         (first_positions.c.first_position - last_positions.c.last_position).label("change")
     ).join(
         last_positions, first_positions.c.url == last_positions.c.url
+    ).filter(
+        # En az 1 pozisyon değişikliği olanları göster
+        first_positions.c.first_position != last_positions.c.last_position
     )
     
     if direction == "up":
@@ -280,6 +283,7 @@ def filter_links(
         }
         for link, result in results
     ]
+
 
 
 
