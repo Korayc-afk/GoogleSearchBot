@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { format } from 'date-fns'
-import { formatInTimeZone } from 'date-fns-tz'
+import { formatInTimeZone, utcToZonedTime } from 'date-fns-tz'
 
 function Dashboard({ API_BASE }) {
   const [results, setResults] = useState([])
@@ -84,7 +84,7 @@ function Dashboard({ API_BASE }) {
               <div>
                 <strong>Son Arama:</strong>
                 <div style={{ marginTop: '5px', fontSize: '14px' }}>
-                  {formatInTimeZone(new Date(schedulerStatus.last_search_date), 'Europe/Istanbul', 'dd MMM yyyy HH:mm')} (TR)
+                  {format(utcToZonedTime(new Date(schedulerStatus.last_search_date.endsWith('Z') ? schedulerStatus.last_search_date : schedulerStatus.last_search_date + 'Z'), 'Europe/Istanbul'), 'dd MMM yyyy HH:mm')} (TR)
                 </div>
               </div>
             )}
@@ -92,7 +92,7 @@ function Dashboard({ API_BASE }) {
               <div>
                 <strong>Bir Sonraki Arama:</strong>
                 <div style={{ marginTop: '5px', fontSize: '14px', color: '#667eea', fontWeight: 'bold' }}>
-                  {formatInTimeZone(new Date(schedulerStatus.next_run_time), 'Europe/Istanbul', 'dd MMM yyyy HH:mm')} (TR)
+                  {format(utcToZonedTime(new Date(schedulerStatus.next_run_time.endsWith('Z') ? schedulerStatus.next_run_time : schedulerStatus.next_run_time + 'Z'), 'Europe/Istanbul'), 'dd MMM yyyy HH:mm')} (TR)
                 </div>
               </div>
             )}
@@ -142,7 +142,7 @@ function Dashboard({ API_BASE }) {
               {results.map((result) => (
                 <tr key={result.id}>
                   <td>
-                    {formatInTimeZone(new Date(result.search_date), 'Europe/Istanbul', 'dd MMM yyyy HH:mm')} (TR)
+                    {format(utcToZonedTime(new Date(result.search_date.endsWith('Z') ? result.search_date : result.search_date + 'Z'), 'Europe/Istanbul'), 'dd MMM yyyy HH:mm')} (TR)
                   </td>
                   <td>{result.total_results.toLocaleString()}</td>
                   <td>{result.links?.length || 0}</td>
