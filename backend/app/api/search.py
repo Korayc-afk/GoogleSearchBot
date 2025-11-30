@@ -129,6 +129,44 @@ def get_link_stats(
     return stats
 
 
+@router.get("/stats")
+def get_search_stats(db: Session = Depends(get_db)):
+    """Genel arama istatistiklerini getirir"""
+    # Toplam arama sayısı
+    total_searches = db.query(func.count(SearchResult.id)).scalar() or 0
+    
+    # Toplam link sayısı
+    total_links = db.query(func.count(SearchLink.id)).scalar() or 0
+    
+    # Benzersiz domain sayısı
+    unique_domains = db.query(func.count(func.distinct(SearchLink.domain))).scalar() or 0
+    
+    # Son 30 gün içindeki link sayısı
+    since_date = datetime.utcnow() - timedelta(days=30)
+    recent_links = db.query(func.count(SearchLink.id))\
+        .filter(SearchLink.created_at >= since_date)\
+        .scalar() or 0
+    
+    # Son 30 gün içindeki benzersiz domain sayısı
+    recent_unique_domains = db.query(func.count(func.distinct(SearchLink.domain)))\
+        .filter(SearchLink.created_at >= since_date)\
+        .scalar() or 0
+    
+    # Son arama tarihi
+    last_search = db.query(SearchResult)\
+        .order_by(SearchResult.search_date.desc())\
+        .first()
+    
+    return {
+        "total_searches": total_searches,
+        "total_links": total_links,
+        "unique_domains": unique_domains,
+        "recent_links": recent_links,
+        "recent_unique_domains": recent_unique_domains,
+        "last_search_date": last_search.search_date if last_search else None
+    }
+
+
 @router.get("/reports/daily", response_model=List[DailyReportResponse])
 def get_daily_reports(
     days: int = 30,
@@ -321,4 +359,42 @@ def get_link_stats_for_period(
         ))
     
     return stats
+
+
+@router.get("/stats")
+def get_search_stats(db: Session = Depends(get_db)):
+    """Genel arama istatistiklerini getirir"""
+    # Toplam arama sayısı
+    total_searches = db.query(func.count(SearchResult.id)).scalar() or 0
+    
+    # Toplam link sayısı
+    total_links = db.query(func.count(SearchLink.id)).scalar() or 0
+    
+    # Benzersiz domain sayısı
+    unique_domains = db.query(func.count(func.distinct(SearchLink.domain))).scalar() or 0
+    
+    # Son 30 gün içindeki link sayısı
+    since_date = datetime.utcnow() - timedelta(days=30)
+    recent_links = db.query(func.count(SearchLink.id))\
+        .filter(SearchLink.created_at >= since_date)\
+        .scalar() or 0
+    
+    # Son 30 gün içindeki benzersiz domain sayısı
+    recent_unique_domains = db.query(func.count(func.distinct(SearchLink.domain)))\
+        .filter(SearchLink.created_at >= since_date)\
+        .scalar() or 0
+    
+    # Son arama tarihi
+    last_search = db.query(SearchResult)\
+        .order_by(SearchResult.search_date.desc())\
+        .first()
+    
+    return {
+        "total_searches": total_searches,
+        "total_links": total_links,
+        "unique_domains": unique_domains,
+        "recent_links": recent_links,
+        "recent_unique_domains": recent_unique_domains,
+        "last_search_date": last_search.search_date if last_search else None
+    }
 
