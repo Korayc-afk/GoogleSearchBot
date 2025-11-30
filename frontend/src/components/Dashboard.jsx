@@ -22,28 +22,49 @@ function Dashboard({ API_BASE }) {
 
   const fetchData = async () => {
     try {
-      const [resultsRes, linksRes, schedulerRes] = await Promise.all([
+      const [resultsRes, linksRes, schedulerRes, statsRes] = await Promise.all([
         axios.get(`${API_BASE}/search/results?limit=10`),
         axios.get(`${API_BASE}/search/links/stats?days=7&limit=10`),
-        axios.get(`${API_BASE}/settings/scheduler-status`)
+        axios.get(`${API_BASE}/settings/scheduler-status`),
+        axios.get(`${API_BASE}/search/stats`)
       ])
 
       setResults(resultsRes.data)
       setLinkStats(linksRes.data)
       setSchedulerStatus(schedulerRes.data)
 
-      // İstatistikleri hesapla
-      const uniqueDomains = new Set(
-        linksRes.data.map((link) => link.domain)
-      ).size
-
+      // İstatistikleri backend'den al
       setStats({
-        totalSearches: resultsRes.data.length,
-        totalLinks: linksRes.data.reduce((sum, link) => sum + link.total_appearances, 0),
-        uniqueDomains
+        totalSearches: statsRes.data.total_searches || 0,
+        totalLinks: statsRes.data.recent_links || 0,
+        uniqueDomains: statsRes.data.recent_unique_domains || 0
       })
     } catch (error) {
       console.error('Veri yüklenemedi:', error)
+      // Hata durumunda eski yöntemle devam et
+      try {
+        const [resultsRes, linksRes, schedulerRes] = await Promise.all([
+          axios.get(`${API_BASE}/search/results?limit=10`),
+          axios.get(`${API_BASE}/search/links/stats?days=7&limit=10`),
+          axios.get(`${API_BASE}/settings/scheduler-status`)
+        ])
+
+        setResults(resultsRes.data)
+        setLinkStats(linksRes.data)
+        setSchedulerStatus(schedulerRes.data)
+
+        const uniqueDomains = new Set(
+          linksRes.data.map((link) => link.domain)
+        ).size
+
+        setStats({
+          totalSearches: resultsRes.data.length,
+          totalLinks: linksRes.data.reduce((sum, link) => sum + link.total_appearances, 0),
+          uniqueDomains
+        })
+      } catch (fallbackError) {
+        console.error('Fallback veri yükleme hatası:', fallbackError)
+      }
     } finally {
       setLoading(false)
     }
@@ -112,16 +133,25 @@ function Dashboard({ API_BASE }) {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <h3>Toplam Arama</h3>
+          <h3>📊 Toplam Arama</h3>
           <div className="value">{stats.totalSearches}</div>
+          <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+            Tüm zamanlar
+          </small>
         </div>
         <div className="stat-card">
-          <h3>Toplam Link</h3>
+          <h3>🔗 Toplam Link</h3>
           <div className="value">{stats.totalLinks}</div>
+          <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+            Son 30 gün
+          </small>
         </div>
         <div className="stat-card">
-          <h3>Benzersiz Domain</h3>
+          <h3>🌐 Benzersiz Domain</h3>
           <div className="value">{stats.uniqueDomains}</div>
+          <small style={{ color: '#666', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+            Son 30 gün
+          </small>
         </div>
       </div>
 
