@@ -33,31 +33,41 @@ function Charts({ API_BASE }) {
     setLoading(true)
     try {
       const [trendRes, domainRes, moversRes] = await Promise.all([
-        axios.get(`${API_BASE}/analytics/position-trend${selectedUrl ? `?url=${encodeURIComponent(selectedUrl)}` : '?days=30'}`),
-        axios.get(`${API_BASE}/analytics/domain-distribution?days=30&limit=10`),
-        axios.get(`${API_BASE}/analytics/top-movers?days=7&limit=10`)
+        axios.get(`${API_BASE}/analytics/position-trend${selectedUrl ? `?url=${encodeURIComponent(selectedUrl)}` : '?days=30'}`).catch(() => ({ data: { daily_data: {} } })),
+        axios.get(`${API_BASE}/analytics/domain-distribution?days=30&limit=10`).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/analytics/top-movers?days=30&limit=10&direction=both`).catch(() => ({ data: [] }))
       ])
 
       // Position trend verilerini formatla
       const trendData = []
-      if (trendRes.data.daily_data) {
+      if (trendRes.data && trendRes.data.daily_data) {
         Object.keys(trendRes.data.daily_data).sort().forEach(date => {
           const dayData = trendRes.data.daily_data[date]
-          dayData.forEach(item => {
-            trendData.push({
-              date: date,
-              position: item.avg_position,
-              domain: item.domain
+          if (Array.isArray(dayData)) {
+            dayData.forEach(item => {
+              trendData.push({
+                date: date,
+                position: item.avg_position,
+                domain: item.domain
+              })
             })
-          })
+          }
         })
       }
       setPositionTrend(trendData)
 
-      setDomainDistribution(domainRes.data)
-      setTopMovers(moversRes.data)
+      // Domain distribution - boş array kontrolü
+      setDomainDistribution(Array.isArray(domainRes.data) ? domainRes.data : [])
+
+      // Top movers - boş array kontrolü ve format kontrolü
+      const moversData = Array.isArray(moversRes.data) ? moversRes.data : []
+      setTopMovers(moversData)
     } catch (error) {
       console.error('Grafik verileri yüklenemedi:', error)
+      // Hata durumunda boş array'ler set et
+      setPositionTrend([])
+      setDomainDistribution([])
+      setTopMovers([])
     } finally {
       setLoading(false)
     }
@@ -133,8 +143,13 @@ function Charts({ API_BASE }) {
 
       <div className="card">
         <h2>🚀 En Çok Hareket Eden Linkler</h2>
-        {topMovers.length === 0 ? (
-          <p>Veri yok</p>
+        {!topMovers || topMovers.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+            <p>Veri yok</p>
+            <small style={{ display: 'block', marginTop: '10px' }}>
+              En az 2 arama sonucu olması ve pozisyon değişikliği olması gerekiyor.
+            </small>
+          </div>
         ) : (
           <table className="table">
             <thead>
@@ -148,12 +163,16 @@ function Charts({ API_BASE }) {
             <tbody>
               {topMovers.map((mover, idx) => (
                 <tr key={idx}>
-                  <td>{mover.domain}</td>
-                  <td>#{mover.first_position}</td>
-                  <td>#{mover.last_position}</td>
+                  <td><strong>{mover.domain || mover.url || '-'}</strong></td>
                   <td>
-                    <span className={`badge ${mover.direction === 'up' ? 'badge-success' : 'badge-danger'}`}>
-                      {mover.direction === 'up' ? '↑' : '↓'} {Math.abs(mover.change)}
+                    <span className="badge">#{mover.first_position || '-'}</span>
+                  </td>
+                  <td>
+                    <span className="badge">#{mover.last_position || '-'}</span>
+                  </td>
+                  <td>
+                    <span className={`badge ${mover.direction === 'up' ? 'badge-success' : mover.direction === 'down' ? 'badge-danger' : 'badge'}`}>
+                      {mover.direction === 'up' ? '↑' : mover.direction === 'down' ? '↓' : '→'} {Math.abs(mover.change || 0)}
                     </span>
                   </td>
                 </tr>
