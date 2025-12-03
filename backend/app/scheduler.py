@@ -104,30 +104,46 @@ def check_position_changes(db: Session, new_links: list):
                 old_position = old_positions[url]
                 change = new_position - old_position
                 
-                # Önemli değişiklik varsa email gönder
+                # Önemli değişiklik varsa email gönder (background thread'de)
                 if abs(change) >= 3:  # 3+ pozisyon değişikliği
-                    asyncio.create_task(
-                        email_service.send_position_change_alert(
-                            url=url,
-                            domain=new_link_data.get("domain", ""),
-                            old_position=old_position,
-                            new_position=new_position,
-                            change=change
-                        )
-                    )
+                    def send_email_async():
+                        """Background thread'de email gönder"""
+                        try:
+                            asyncio.run(
+                                email_service.send_position_change_alert(
+                                    url=url,
+                                    domain=new_link_data.get("domain", ""),
+                                    old_position=old_position,
+                                    new_position=new_position,
+                                    change=change
+                                )
+                            )
+                        except Exception as e:
+                            logger.error(f"Email gönderme hatası: {str(e)}")
+                    
+                    import threading
+                    threading.Thread(target=send_email_async, daemon=True).start()
                 
                 # Kritik düşüş (5+ pozisyon)
                 if change >= 5:
-                    asyncio.create_task(
-                        email_service.send_critical_drop_alert(
-                            url=url,
-                            domain=new_link_data.get("domain", ""),
-                            old_position=old_position,
-                            new_position=new_position
-                        )
-                    )
+                    def send_critical_email_async():
+                        """Background thread'de kritik email gönder"""
+                        try:
+                            asyncio.run(
+                                email_service.send_critical_drop_alert(
+                                    url=url,
+                                    domain=new_link_data.get("domain", ""),
+                                    old_position=old_position,
+                                    new_position=new_position
+                                )
+                            )
+                        except Exception as e:
+                            logger.error(f"Kritik email gönderme hatası: {str(e)}")
+                    
+                    import threading
+                    threading.Thread(target=send_critical_email_async, daemon=True).start()
     except Exception as e:
-        logger.error(f"Pozisyon kontrolü hatası: {str(e)}")
+        logger.error(f"Pozisyon kontrolü hatası: {str(e)}", exc_info=True)
 
 
 async def send_daily_summary_email():
