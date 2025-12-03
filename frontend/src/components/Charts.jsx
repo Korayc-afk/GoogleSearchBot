@@ -21,7 +21,6 @@ const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b'
 function Charts({ API_BASE }) {
   const [positionTrend, setPositionTrend] = useState([])
   const [domainDistribution, setDomainDistribution] = useState([])
-  const [topMovers, setTopMovers] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedUrl, setSelectedUrl] = useState('')
 
@@ -32,10 +31,9 @@ function Charts({ API_BASE }) {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [trendRes, domainRes, moversRes] = await Promise.all([
+      const [trendRes, domainRes] = await Promise.all([
         axios.get(`${API_BASE}/analytics/position-trend${selectedUrl ? `?url=${encodeURIComponent(selectedUrl)}` : '?days=30'}`).catch(() => ({ data: { daily_data: {} } })),
-        axios.get(`${API_BASE}/analytics/domain-distribution?days=30&limit=10`).catch(() => ({ data: [] })),
-        axios.get(`${API_BASE}/analytics/top-movers?days=30&limit=10&direction=both`).catch(() => ({ data: [] }))
+        axios.get(`${API_BASE}/analytics/domain-distribution?days=30&limit=10`).catch(() => ({ data: [] }))
       ])
 
       // Position trend verilerini formatla
@@ -58,16 +56,11 @@ function Charts({ API_BASE }) {
 
       // Domain distribution - boş array kontrolü
       setDomainDistribution(Array.isArray(domainRes.data) ? domainRes.data : [])
-
-      // Top movers - boş array kontrolü ve format kontrolü
-      const moversData = Array.isArray(moversRes.data) ? moversRes.data : []
-      setTopMovers(moversData)
     } catch (error) {
       console.error('Grafik verileri yüklenemedi:', error)
       // Hata durumunda boş array'ler set et
       setPositionTrend([])
       setDomainDistribution([])
-      setTopMovers([])
     } finally {
       setLoading(false)
     }
@@ -141,46 +134,6 @@ function Charts({ API_BASE }) {
         </ResponsiveContainer>
       </div>
 
-      <div className="card">
-        <h2>🚀 En Çok Hareket Eden Linkler</h2>
-        {!topMovers || topMovers.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-            <p>Veri yok</p>
-            <small style={{ display: 'block', marginTop: '10px' }}>
-              En az 2 arama sonucu olması ve pozisyon değişikliği olması gerekiyor.
-            </small>
-          </div>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Domain</th>
-                <th>İlk Pozisyon</th>
-                <th>Son Pozisyon</th>
-                <th>Değişim</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topMovers.map((mover, idx) => (
-                <tr key={idx}>
-                  <td><strong>{mover.domain || mover.url || '-'}</strong></td>
-                  <td>
-                    <span className="badge">#{mover.first_position || '-'}</span>
-                  </td>
-                  <td>
-                    <span className="badge">#{mover.last_position || '-'}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${mover.direction === 'up' ? 'badge-success' : mover.direction === 'down' ? 'badge-danger' : 'badge'}`}>
-                      {mover.direction === 'up' ? '↑' : mover.direction === 'down' ? '↓' : '→'} {Math.abs(mover.change || 0)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
     </div>
   )
 }

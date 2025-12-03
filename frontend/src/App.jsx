@@ -59,7 +59,7 @@ function App() {
       <header className="header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <img src="/logo.png" alt="Logo" style={{ height: '40px', width: 'auto' }} />
+            <img src="/logo.png" alt="Logo" style={{ height: '40px', width: '40px', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none' }} />
             Google Search Bot
           </h1>
           <button
