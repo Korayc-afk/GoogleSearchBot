@@ -74,9 +74,9 @@ function Dashboard({ API_BASE, siteId = 'default' }) {
     return <div className="loading">Yükleniyor...</div>
   }
 
-  // Site adını formatla (default -> Default, gala -> Gala, vb.)
+  // Site adını formatla (default -> Padisah, gala -> Gala, vb.)
   const getSiteName = (siteId) => {
-    if (!siteId || siteId === 'default') return 'Ana Site'
+    if (!siteId || siteId === 'default') return 'Padisah'
     return siteId.charAt(0).toUpperCase() + siteId.slice(1)
   }
 
