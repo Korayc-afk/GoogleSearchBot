@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, and_, or_
 from datetime import datetime, timedelta
 from typing import List, Optional
-from app.database import get_db, SearchResult, SearchLink, SearchSettings
+from app.database import get_db, SearchResult, SearchLink, SearchSettings, init_db
 from app.models import LinkStatsResponse
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
@@ -13,6 +13,7 @@ router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 def get_position_trend(
     url: Optional[str] = Query(None, description="Belirli bir URL için trend"),
     days: int = Query(30, description="Kaç günlük veri"),
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Pozisyon trend verilerini getirir"""
@@ -71,6 +72,7 @@ def get_position_trend(
 def get_domain_distribution(
     days: int = Query(30, description="Kaç günlük veri"),
     limit: int = Query(20, description="Kaç domain gösterilecek"),
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Domain dağılımını getirir"""
@@ -184,6 +186,7 @@ def get_top_movers(
 @router.get("/competitor-analysis")
 def get_competitor_analysis(
     days: int = Query(30, description="Kaç günlük veri"),
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Rakip analizi - hangi domainler en çok görünüyor"""

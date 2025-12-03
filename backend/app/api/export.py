@@ -15,6 +15,7 @@ router = APIRouter(prefix="/api/export", tags=["export"])
 @router.get("/excel/daily")
 def export_daily_excel(
     days: int = 30,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Günlük link pozisyonlarını Excel olarak export eder"""
@@ -90,6 +91,7 @@ def export_daily_excel(
 def export_position_history(
     url: str = None,
     days: int = 30,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Belirli bir URL'in pozisyon geçmişini Excel olarak export eder"""
@@ -183,6 +185,7 @@ def export_position_history(
 @router.get("/excel/summary")
 def export_summary_excel(
     days: int = 30,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Özet istatistikleri Excel olarak export eder"""

@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 
-function Analytics({ API_BASE }) {
+function Analytics({ API_BASE, siteId = 'default' }) {
   const [competitors, setCompetitors] = useState([])
 
   useEffect(() => {
     fetchCompetitors()
-  }, [])
+  }, [siteId])
 
   const fetchCompetitors = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/analytics/competitor-analysis?days=30`).catch(() => ({ data: [] }))
+      const res = await axios.get(`${API_BASE}/analytics/competitor-analysis?days=30&site_id=${siteId}`).catch(() => ({ data: [] }))
       setCompetitors(Array.isArray(res.data) ? res.data : [])
     } catch (error) {
       console.error('Rakip analizi yüklenemedi:', error)

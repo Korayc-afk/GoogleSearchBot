@@ -18,7 +18,7 @@ import {
 
 const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b', '#fa709a']
 
-function Charts({ API_BASE }) {
+function Charts({ API_BASE, siteId = 'default' }) {
   const [positionTrend, setPositionTrend] = useState([])
   const [domainDistribution, setDomainDistribution] = useState([])
   const [loading, setLoading] = useState(true)
@@ -26,14 +26,15 @@ function Charts({ API_BASE }) {
 
   useEffect(() => {
     fetchData()
-  }, [selectedUrl])
+  }, [selectedUrl, siteId])
 
   const fetchData = async () => {
     setLoading(true)
     try {
+      const urlParam = selectedUrl ? `&url=${encodeURIComponent(selectedUrl)}` : ''
       const [trendRes, domainRes] = await Promise.all([
-        axios.get(`${API_BASE}/analytics/position-trend${selectedUrl ? `?url=${encodeURIComponent(selectedUrl)}` : '?days=30'}`).catch(() => ({ data: { daily_data: {} } })),
-        axios.get(`${API_BASE}/analytics/domain-distribution?days=30&limit=10`).catch(() => ({ data: [] }))
+        axios.get(`${API_BASE}/analytics/position-trend?days=30&site_id=${siteId}${urlParam}`).catch(() => ({ data: { daily_data: {} } })),
+        axios.get(`${API_BASE}/analytics/domain-distribution?days=30&limit=10&site_id=${siteId}`).catch(() => ({ data: [] }))
       ])
 
       // Position trend verilerini formatla

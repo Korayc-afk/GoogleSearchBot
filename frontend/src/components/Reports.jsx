@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { format } from 'date-fns'
 
-function Reports({ API_BASE }) {
+function Reports({ API_BASE, siteId = 'default' }) {
   const [activeTab, setActiveTab] = useState('daily')
   const [dailyReports, setDailyReports] = useState([])
   const [weeklyReports, setWeeklyReports] = useState([])
@@ -12,18 +12,18 @@ function Reports({ API_BASE }) {
 
   useEffect(() => {
     fetchReports()
-  }, [activeTab])
+  }, [activeTab, siteId])
 
   const handleExport = async (type) => {
     setExporting(true)
     try {
       let url = ''
       if (type === 'daily') {
-        url = `${API_BASE}/export/excel/daily?days=30`
+        url = `${API_BASE}/export/excel/daily?days=30&site_id=${siteId}`
       } else if (type === 'summary') {
-        url = `${API_BASE}/export/excel/summary?days=30`
+        url = `${API_BASE}/export/excel/summary?days=30&site_id=${siteId}`
       } else if (type === 'history') {
-        url = `${API_BASE}/export/excel/position-history?days=30`
+        url = `${API_BASE}/export/excel/position-history?days=30&site_id=${siteId}`
       }
 
       const response = await axios.get(url, {
@@ -54,13 +54,13 @@ function Reports({ API_BASE }) {
     setLoading(true)
     try {
       if (activeTab === 'daily') {
-        const res = await axios.get(`${API_BASE}/search/reports/daily?days=30`)
+        const res = await axios.get(`${API_BASE}/search/reports/daily?days=30&site_id=${siteId}`)
         setDailyReports(res.data)
       } else if (activeTab === 'weekly') {
-        const res = await axios.get(`${API_BASE}/search/reports/weekly?weeks=12`)
+        const res = await axios.get(`${API_BASE}/search/reports/weekly?weeks=12&site_id=${siteId}`)
         setWeeklyReports(res.data)
       } else {
-        const res = await axios.get(`${API_BASE}/search/reports/monthly?months=12`)
+        const res = await axios.get(`${API_BASE}/search/reports/monthly?months=12&site_id=${siteId}`)
         setMonthlyReports(res.data)
       }
     } catch (error) {
