@@ -20,6 +20,7 @@ class SearchSettingsUpdate(BaseModel):
     location: Optional[str] = None
     enabled: Optional[bool] = None
     interval_hours: Optional[int] = None
+    serpapi_key: Optional[str] = None
 
 
 class SearchSettingsResponse(SearchSettingsBase):

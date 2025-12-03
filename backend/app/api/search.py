@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
 from datetime import datetime, timedelta
 from typing import List
-from app.database import get_db, SearchSettings, SearchResult, SearchLink
+from app.database import get_db, SearchSettings, SearchResult, SearchLink, init_db
 from app.models import (
     SearchResultResponse, LinkStatsResponse, DailyReportResponse,
     WeeklyReportResponse, MonthlyReportResponse
@@ -12,16 +12,24 @@ from app.serpapi_client import SerpApiClient
 from app.scheduler import perform_search
 
 router = APIRouter(prefix="/api/search", tags=["search"])
-serpapi_client = SerpApiClient()
 
 
 @router.post("/run")
-def run_search_now(db: Session = Depends(get_db)):
+def run_search_now(
+    site_id: str = Query("default", description="Site ID"),
+    db: Session = Depends(get_db)
+):
     """Manuel olarak arama yapar (çoklu kelime desteği ile)"""
+    # Site için database'i başlat
+    init_db(site_id)
+    
     settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
     
     if not settings:
         raise HTTPException(status_code=404, detail="Aktif arama ayarı bulunamadı")
+    
+    if not settings.serpapi_key:
+        raise HTTPException(status_code=400, detail="SerpApi key bulunamadı! Lütfen Settings'ten SerpApi key'inizi girin.")
     
     # Çoklu arama kelimesi desteği
     queries = [q.strip() for q in settings.search_query.split(',') if q.strip()]
@@ -52,6 +60,7 @@ def run_search_now(db: Session = Depends(get_db)):
 def get_search_results(
     limit: int = 50,
     offset: int = 0,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Arama sonuçlarını listeler"""
@@ -65,7 +74,11 @@ def get_search_results(
 
 
 @router.get("/results/{result_id}", response_model=SearchResultResponse)
-def get_search_result(result_id: int, db: Session = Depends(get_db)):
+def get_search_result(
+    result_id: int,
+    site_id: str = Query("default", description="Site ID"),
+    db: Session = Depends(get_db)
+):
     """Belirli bir arama sonucunu getirir"""
     result = db.query(SearchResult).filter(SearchResult.id == result_id).first()
     
@@ -79,6 +92,7 @@ def get_search_result(result_id: int, db: Session = Depends(get_db)):
 def get_link_stats(
     days: int = 30,
     limit: int = 50,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Link istatistiklerini getirir"""
@@ -170,6 +184,7 @@ def get_search_stats(db: Session = Depends(get_db)):
 @router.get("/reports/daily", response_model=List[DailyReportResponse])
 def get_daily_reports(
     days: int = 30,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Günlük raporları getirir"""
@@ -215,6 +230,7 @@ def get_daily_reports(
 @router.get("/reports/weekly", response_model=List[WeeklyReportResponse])
 def get_weekly_reports(
     weeks: int = 12,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Haftalık raporları getirir"""
@@ -263,6 +279,7 @@ def get_weekly_reports(
 @router.get("/reports/monthly", response_model=List[MonthlyReportResponse])
 def get_monthly_reports(
     months: int = 12,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Aylık raporları getirir"""

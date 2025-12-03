@@ -22,15 +22,24 @@ def perform_search(db: Session, settings: SearchSettings):
     try:
         logger.info(f"Arama başlatılıyor: {settings.search_query} - {settings.location}")
         
+        # Site'nin kendi SerpApi key'ini kullan
+        api_key = settings.serpapi_key if settings.serpapi_key else None
+        if not api_key:
+            logger.error("SerpApi key bulunamadı! Lütfen Settings'ten SerpApi key'inizi girin.")
+            raise ValueError("SerpApi key bulunamadı")
+        
+        # Site'ye özel client oluştur
+        site_client = SerpApiClient(api_key=api_key)
+        
         # SerpApi ile arama yap
-        search_data = serpapi_client.search(settings.search_query, settings.location)
+        search_data = site_client.search(settings.search_query, settings.location)
         
         if not search_data["success"]:
             logger.error(f"Arama hatası: {search_data.get('error')}")
             return
         
         # Linkleri çıkar
-        links = serpapi_client.extract_links(search_data)
+        links = site_client.extract_links(search_data)
         
         # Veritabanına kaydet
         search_result = SearchResult(

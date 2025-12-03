@@ -9,7 +9,7 @@ import './App.css'
 
 const API_BASE = import.meta.env.PROD ? '/api' : 'http://localhost:8000/api'
 
-function App() {
+function App({ siteId = 'default' }) {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -21,7 +21,7 @@ function App() {
 
   useEffect(() => {
     fetchSettings()
-  }, [])
+  }, [siteId])
 
   useEffect(() => {
     // Dark mode'u localStorage'a kaydet
@@ -36,7 +36,7 @@ function App() {
 
   const fetchSettings = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/settings`)
+      const response = await axios.get(`${API_BASE}/settings?site_id=${siteId}`)
       setSettings(response.data)
     } catch (error) {
       console.error('Ayarlar yüklenemedi:', error)
@@ -105,15 +105,16 @@ function App() {
       </header>
 
       <main className="main">
-        {activeTab === 'dashboard' && <Dashboard API_BASE={API_BASE} />}
-        {activeTab === 'reports' && <Reports API_BASE={API_BASE} />}
-        {activeTab === 'charts' && <Charts API_BASE={API_BASE} />}
-        {activeTab === 'analytics' && <Analytics API_BASE={API_BASE} />}
+        {activeTab === 'dashboard' && <Dashboard API_BASE={API_BASE} siteId={siteId} />}
+        {activeTab === 'reports' && <Reports API_BASE={API_BASE} siteId={siteId} />}
+        {activeTab === 'charts' && <Charts API_BASE={API_BASE} siteId={siteId} />}
+        {activeTab === 'analytics' && <Analytics API_BASE={API_BASE} siteId={siteId} />}
         {activeTab === 'settings' && (
           <Settings
             API_BASE={API_BASE}
             settings={settings}
             onUpdate={fetchSettings}
+            siteId={siteId}
           />
         )}
       </main>

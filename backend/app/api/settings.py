@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
-from app.database import get_db, SearchSettings, SearchResult
+from app.database import get_db, SearchSettings, SearchResult, init_db
 from app.models import (
     SearchSettingsResponse, SearchSettingsCreate, SearchSettingsUpdate,
     SchedulerStatusResponse
@@ -13,8 +13,14 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 @router.get("", response_model=SearchSettingsResponse)
-def get_settings(db: Session = Depends(get_db)):
+def get_settings(
+    site_id: str = Query("default", description="Site ID"),
+    db: Session = Depends(get_db)
+):
     """Mevcut arama ayarlarını getirir"""
+    # Site için database'i başlat
+    init_db(site_id)
+    
     settings = db.query(SearchSettings).first()
     
     if not settings:
@@ -23,7 +29,8 @@ def get_settings(db: Session = Depends(get_db)):
             search_query="padişah bet",
             location="Fatih,Istanbul",
             enabled=True,
-            interval_hours=12
+            interval_hours=12,
+            serpapi_key=None
         )
         db.add(settings)
         db.commit()
@@ -35,6 +42,7 @@ def get_settings(db: Session = Depends(get_db)):
 @router.put("", response_model=SearchSettingsResponse)
 def update_settings(
     settings_update: SearchSettingsUpdate,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Arama ayarlarını günceller"""
@@ -71,6 +79,7 @@ def update_settings(
 @router.post("", response_model=SearchSettingsResponse)
 def create_settings(
     settings_create: SearchSettingsCreate,
+    site_id: str = Query("default", description="Site ID"),
     db: Session = Depends(get_db)
 ):
     """Yeni arama ayarı oluşturur"""
@@ -92,7 +101,10 @@ def create_settings(
 
 
 @router.get("/scheduler-status", response_model=SchedulerStatusResponse)
-def get_scheduler_status(db: Session = Depends(get_db)):
+def get_scheduler_status(
+    site_id: str = Query("default", description="Site ID"),
+    db: Session = Depends(get_db)
+):
     """Scheduler durumunu getirir"""
     settings = db.query(SearchSettings).first()
     

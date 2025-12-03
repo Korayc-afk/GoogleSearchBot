@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { formatInTimeZone } from 'date-fns-tz'
 
-function Settings({ API_BASE, settings, onUpdate }) {
+function Settings({ API_BASE, settings, onUpdate, siteId = 'default' }) {
   const [formData, setFormData] = useState({
     search_query: '',
     location: 'Fatih,Istanbul',
     enabled: true,
-    interval_hours: 12
+    interval_hours: 12,
+    serpapi_key: ''
   })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
@@ -26,20 +27,21 @@ function Settings({ API_BASE, settings, onUpdate }) {
         search_query: settings.search_query || '',
         location: settings.location || 'Fatih,Istanbul',
         enabled: settings.enabled !== undefined ? settings.enabled : true,
-        interval_hours: settings.interval_hours || 12
+        interval_hours: settings.interval_hours || 12,
+        serpapi_key: settings.serpapi_key || ''
       })
     }
     fetchStats()
     const interval = setInterval(fetchStats, 30000) // 30 saniyede bir güncelle
     return () => clearInterval(interval)
-  }, [settings])
+  }, [settings, siteId])
 
   const fetchStats = async () => {
     try {
       const [schedulerRes, resultsRes, statsRes] = await Promise.all([
-        axios.get(`${API_BASE}/settings/scheduler-status`),
-        axios.get(`${API_BASE}/search/results?limit=5`),
-        axios.get(`${API_BASE}/search/stats`).catch(() => null)
+        axios.get(`${API_BASE}/settings/scheduler-status?site_id=${siteId}`),
+        axios.get(`${API_BASE}/search/results?limit=5&site_id=${siteId}`),
+        axios.get(`${API_BASE}/search/stats?site_id=${siteId}`).catch(() => null)
       ])
 
       setSchedulerStatus(schedulerRes.data)
@@ -81,7 +83,7 @@ function Settings({ API_BASE, settings, onUpdate }) {
     setMessage(null)
 
     try {
-      await axios.put(`${API_BASE}/settings`, formData)
+      await axios.put(`${API_BASE}/settings?site_id=${siteId}`, formData)
       setMessage({ type: 'success', text: 'Ayarlar başarıyla güncellendi!' })
       onUpdate()
     } catch (error) {
@@ -97,6 +99,22 @@ function Settings({ API_BASE, settings, onUpdate }) {
   const handleTestSearch = async () => {
     setLoading(true)
     setMessage(null)
+    try {
+      await axios.post(`${API_BASE}/search/run?site_id=${siteId}`)
+      setMessage({ type: 'success', text: 'Test araması başlatıldı! Sonuçlar birkaç saniye içinde görünecektir.' })
+      setTimeout(() => {
+        fetchStats()
+        onUpdate()
+      }, 3000)
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.detail || 'Test araması başlatılırken hata oluştu'
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
     try {
       await axios.post(`${API_BASE}/search/run`)
@@ -257,6 +275,29 @@ function Settings({ API_BASE, settings, onUpdate }) {
             💡 <strong>İpucu:</strong> Birden fazla kelime için virgülle ayırın. Örnek: "padişah bet, bahis sitesi, casino"
             <br />
             Her kelime için ayrı ayrı arama yapılacak ve sonuçlar birleştirilecektir.
+          </small>
+        </div>
+
+        <div className="form-group">
+          <label>
+            🔑 SerpApi Key
+            <span style={{ marginLeft: '8px', fontSize: '12px', color: '#667eea', fontWeight: 'normal' }}>
+              (Zorunlu)
+            </span>
+          </label>
+          <input
+            type="password"
+            value={formData.serpapi_key}
+            onChange={(e) =>
+              setFormData({ ...formData, serpapi_key: e.target.value })
+            }
+            placeholder="SerpApi API anahtarınızı girin"
+            required
+          />
+          <small style={{ color: '#666', display: 'block', marginTop: '0.5rem', lineHeight: '1.5' }}>
+            💡 <strong>İpucu:</strong> SerpApi key'inizi <a href="https://serpapi.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>serpapi.com/dashboard</a> adresinden alabilirsiniz.
+            <br />
+            Her site kendi SerpApi key'ini kullanır. Key'inizi güvenli tutun!
           </small>
         </div>
 
