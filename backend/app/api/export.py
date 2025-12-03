@@ -8,6 +8,12 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from app.database import get_db, SearchResult, SearchLink, init_db
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.pdfgen import canvas
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
@@ -270,6 +276,204 @@ def export_summary_excel(
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/pdf/daily")
+def export_daily_pdf(
+    days: int = 30,
+    site_id: str = Query("default", description="Site ID"),
+    db: Session = Depends(get_db)
+):
+    """Günlük link pozisyonlarını PDF olarak export eder"""
+    init_db(site_id)
+    since_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Tüm arama sonuçlarını ve linklerini al
+    results = db.query(SearchResult)\
+        .filter(SearchResult.search_date >= since_date)\
+        .order_by(SearchResult.search_date.asc())\
+        .all()
+    
+    # PDF oluştur
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    
+    # Stil tanımlamaları
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor=colors.HexColor('#667eea'),
+        spaceAfter=30,
+        alignment=1  # Center
+    )
+    
+    # Başlık
+    elements.append(Paragraph("Google Search Bot - Günlük Rapor", title_style))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Tarih aralığı
+    date_range = Paragraph(
+        f"<b>Tarih Aralığı:</b> {(datetime.utcnow() - timedelta(days=days)).strftime('%d.%m.%Y')} - {datetime.utcnow().strftime('%d.%m.%Y')}",
+        styles['Normal']
+    )
+    elements.append(date_range)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Veri tablosu
+    data = [["Tarih", "Saat", "URL", "Domain", "Pozisyon"]]
+    
+    for result in results:
+        links = db.query(SearchLink)\
+            .filter(SearchLink.search_result_id == result.id)\
+            .order_by(SearchLink.position.asc())\
+            .all()
+        
+        for link in links:
+            search_date = result.search_date
+            # URL'yi kısalt (çok uzunsa)
+            url_display = link.url[:60] + "..." if len(link.url) > 60 else link.url
+            data.append([
+                search_date.strftime("%Y-%m-%d"),
+                search_date.strftime("%H:%M"),
+                url_display,
+                link.domain or "",
+                str(link.position)
+            ])
+    
+    # Tablo oluştur
+    table = Table(data, colWidths=[1*inch, 0.8*inch, 3*inch, 1.2*inch, 0.8*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]))
+    
+    elements.append(table)
+    
+    # PDF'i oluştur
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"google_search_bot_daily_{datetime.now().strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/pdf/summary")
+def export_summary_pdf(
+    days: int = 30,
+    site_id: str = Query("default", description="Site ID"),
+    db: Session = Depends(get_db)
+):
+    """Özet istatistikleri PDF olarak export eder"""
+    init_db(site_id)
+    since_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Link istatistiklerini hesapla
+    stats = db.query(
+        SearchLink.url,
+        SearchLink.domain,
+        SearchLink.title,
+        func.count(SearchLink.id).label("total_appearances"),
+        func.min(SearchLink.created_at).label("first_seen"),
+        func.max(SearchLink.created_at).label("last_seen"),
+        func.avg(SearchLink.position).label("avg_position"),
+        func.min(SearchLink.position).label("best_position"),
+        func.max(SearchLink.position).label("worst_position")
+    ).join(
+        SearchResult, SearchLink.search_result_id == SearchResult.id
+    ).filter(
+        SearchResult.search_date >= since_date
+    ).group_by(
+        SearchLink.url, SearchLink.domain, SearchLink.title
+    ).order_by(
+        func.count(SearchLink.id).desc()
+    ).limit(50).all()
+    
+    # PDF oluştur
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    
+    # Stil tanımlamaları
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        textColor=colors.HexColor('#667eea'),
+        spaceAfter=30,
+        alignment=1
+    )
+    
+    # Başlık
+    elements.append(Paragraph("Google Search Bot - Özet Rapor", title_style))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Tarih aralığı
+    date_range = Paragraph(
+        f"<b>Tarih Aralığı:</b> {(datetime.utcnow() - timedelta(days=days)).strftime('%d.%m.%Y')} - {datetime.utcnow().strftime('%d.%m.%Y')}",
+        styles['Normal']
+    )
+    elements.append(date_range)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Veri tablosu
+    data = [["URL", "Domain", "Görünme", "Ort. Pozisyon", "En İyi", "En Kötü"]]
+    
+    for stat in stats:
+        url_display = stat.url[:40] + "..." if len(stat.url) > 40 else stat.url
+        data.append([
+            url_display,
+            stat.domain or "",
+            str(stat.total_appearances),
+            f"{float(stat.avg_position):.1f}",
+            str(stat.best_position),
+            str(stat.worst_position)
+        ])
+    
+    # Tablo oluştur
+    table = Table(data, colWidths=[2.5*inch, 1.5*inch, 0.8*inch, 1*inch, 0.7*inch, 0.7*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]))
+    
+    elements.append(table)
+    
+    # PDF'i oluştur
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"google_search_bot_summary_{datetime.now().strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 

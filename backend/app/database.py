@@ -7,7 +7,18 @@ from typing import Dict
 
 # SQLite database - Multi-site desteği
 # Her site için ayrı database dosyası
-data_dir = os.path.join(os.path.dirname(__file__), "../../data")
+# Environment variable'dan data path'i al, yoksa varsayılan kullan
+# Production'da /data kullanılmalı (persistent volume için)
+# Development'ta ./data kullanılır
+DATA_BASE_DIR = os.getenv("DATA_DIR", "/data")
+# Eğer DATA_DIR yoksa ve development modundaysak (relative path), ./data kullan
+if DATA_BASE_DIR == "/data" and not os.path.exists("/data"):
+    # Development modu - relative path kullan
+    data_dir = os.path.join(os.path.dirname(__file__), "../../data")
+else:
+    # Production modu - absolute path kullan
+    data_dir = DATA_BASE_DIR
+
 os.makedirs(data_dir, exist_ok=True)
 
 # Engine cache - her site için ayrı engine

@@ -28,8 +28,10 @@ COPY backend/app/ ./app/
 # Frontend build dosyalarını kopyala
 COPY --from=frontend-builder /build/dist ./frontend/dist
 
-# Data dizini oluştur
-RUN mkdir -p /app/data
+# Data dizini oluştur (persistent storage için)
+RUN mkdir -p /data
+# VOLUME tanımla - bu sayede veriler container dışında saklanır
+VOLUME ["/data"]
 
 # Port
 EXPOSE 8000
