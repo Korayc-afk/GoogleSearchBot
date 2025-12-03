@@ -140,43 +140,45 @@ if os.path.exists(frontend_path):
         }
     
     # SPA için catch-all route - API route'larından SONRA olmalı
-    # Bu route sadece API route'ları match edilmediğinde çalışır
+    # Bu route sadece geçerli frontend route'ları için çalışır
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str, request: Request):
-        logger.warning(f"⚠️ Catch-all route hit: {full_path}")
-        logger.warning(f"⚠️ Request path: {request.url.path}")
-        logger.warning(f"⚠️ Request method: {request.method}")
-        
         # API route'ları buraya gelmemeli - eğer geldiyse bir sorun var
-        if full_path.startswith("api/"):
-            logger.error(f"❌ API route caught by catch-all: {full_path}")
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
             return JSONResponse(
                 status_code=404,
-                content={
-                    "error": "API route not found",
-                    "path": full_path,
-                    "message": "This should not happen - API routes should be handled before catch-all"
-                }
+                content={"error": "Not found", "path": full_path}
             )
         
-        # API, docs, openapi route'ları zaten yukarıda handle edildi
-        # Static dosyalar da mount edildi
-        # Geri kalan her şey frontend'e yönlendir
+        # Geçerli site ID'leri (alfanumerik ve tire/underscore içerebilir)
+        import re
+        valid_site_pattern = re.compile(r'^[a-zA-Z0-9_-]+$')
         
-        # Eğer buraya geldiyse, frontend route'u demektir
+        # Path'i parçala
+        path_parts = full_path.split('/')
+        site_id = path_parts[0] if path_parts else ''
+        
+        # Eğer geçerli bir site ID değilse ve rastgele bir path ise, 404 döndür
+        # Ama React Router için bazı özel path'leri kabul et (assets, vb.)
+        if (site_id and 
+            not valid_site_pattern.match(site_id) and 
+            not full_path.startswith('assets/') and
+            not full_path.endswith('.png') and
+            not full_path.endswith('.jpg') and
+            not full_path.endswith('.ico') and
+            not full_path.endswith('.svg')):
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Page not found", "path": full_path}
+            )
+        
+        # Geçerli frontend route'u için index.html döndür
         if os.path.exists(index_path):
-            logger.info(f"✅ Serving frontend for: {full_path}")
             return FileResponse(index_path)
         
-        logger.error(f"❌ Frontend index.html not found at: {index_path}")
         return JSONResponse(
             status_code=404,
-            content={
-                "error": "Frontend not found",
-                "api": "/api/health",
-                "docs": "/docs",
-                "index_path": index_path
-            }
+            content={"error": "Frontend not found"}
         )
 else:
     # Frontend yoksa basit bir mesaj döndür

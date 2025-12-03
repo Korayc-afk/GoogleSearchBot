@@ -74,8 +74,24 @@ function Dashboard({ API_BASE, siteId = 'default' }) {
     return <div className="loading">Yükleniyor...</div>
   }
 
+  // Site adını formatla (default -> Default, gala -> Gala, vb.)
+  const getSiteName = (siteId) => {
+    if (!siteId || siteId === 'default') return 'Ana Site'
+    return siteId.charAt(0).toUpperCase() + siteId.slice(1)
+  }
+
   return (
     <div>
+      {/* Site Bilgisi */}
+      <div className="card" style={{ marginBottom: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', border: 'none' }}>
+        <h2 style={{ color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          🏢 {getSiteName(siteId)} - Dashboard
+        </h2>
+        <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9, fontSize: '14px' }}>
+          Site ID: <strong>{siteId}</strong>
+        </p>
+      </div>
+
       {/* Scheduler Durumu */}
       {schedulerStatus && (
         <div className="card" style={{ marginBottom: '20px', border: schedulerStatus.is_running && schedulerStatus.is_enabled ? '2px solid #10b981' : '2px solid #ef4444' }}>
