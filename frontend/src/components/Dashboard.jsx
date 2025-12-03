@@ -3,7 +3,7 @@ import axios from 'axios'
 import { format } from 'date-fns'
 import { formatInTimeZone, utcToZonedTime } from 'date-fns-tz'
 
-function Dashboard({ API_BASE }) {
+function Dashboard({ API_BASE, siteId = 'default' }) {
   const [results, setResults] = useState([])
   const [linkStats, setLinkStats] = useState([])
   const [loading, setLoading] = useState(true)
@@ -18,15 +18,15 @@ function Dashboard({ API_BASE }) {
     fetchData()
     const interval = setInterval(fetchData, 30000) // 30 saniyede bir güncelle
     return () => clearInterval(interval)
-  }, [])
+  }, [siteId])
 
   const fetchData = async () => {
     try {
       const [resultsRes, linksRes, schedulerRes, statsRes] = await Promise.all([
-        axios.get(`${API_BASE}/search/results?limit=10`),
-        axios.get(`${API_BASE}/search/links/stats?days=7&limit=10`),
-        axios.get(`${API_BASE}/settings/scheduler-status`),
-        axios.get(`${API_BASE}/search/stats`)
+        axios.get(`${API_BASE}/search/results?limit=10&site_id=${siteId}`),
+        axios.get(`${API_BASE}/search/links/stats?days=7&limit=10&site_id=${siteId}`),
+        axios.get(`${API_BASE}/settings/scheduler-status?site_id=${siteId}`),
+        axios.get(`${API_BASE}/search/stats?site_id=${siteId}`)
       ])
 
       setResults(resultsRes.data)
