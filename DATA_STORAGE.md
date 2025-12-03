@@ -4,7 +4,8 @@
 
 Botunuzun tüm verileri **SQLite veritabanı** dosyasında saklanıyor:
 
-- **Dosya Konumu**: `/app/data/searchbot.db`
+- **Dosya Konumu**: `/data/{site_id}/searchbot.db` (Production)
+- **Dosya Konumu (Development)**: `./data/{site_id}/searchbot.db`
 - **Veritabanı Türü**: SQLite (hafif, dosya tabanlı)
 - **İçerik**:
   - Arama ayarları (kelime, konum, interval)
@@ -40,6 +41,10 @@ Her aramadaki linkleri saklar:
 
 **ÖNEMLİ:** Docker container silinirse veriler kaybolur! Verilerin kalıcı olması için **Persistent Storage** ayarlamanız gerekiyor.
 
+### ⚠️ GÜNCELLEME: Yeni Path Kullanımı
+
+Artık veriler **`/data`** klasöründe saklanıyor (eski: `/app/data`). Bu, daha güvenli ve kalıcı bir yapı sağlar.
+
 ### Coolify'da Persistent Storage Ayarlama:
 
 1. **Coolify Dashboard**'a gidin
@@ -49,19 +54,26 @@ Her aramadaki linkleri saklar:
 5. **"Add Volume"** veya **"+"** butonuna tıklayın
 6. **"Add Volume Mount"** dialog'unda şu ayarları yapın:
    - **Name**: `searchbot-data` (veya istediğiniz bir isim)
-   - **Source Path**: `/app/data` (container içindeki path)
-   - **Destination Path**: `/app/data` ⚠️ **BU ALAN ÖNEMLİ!** Container içindeki path'i yazın
-   - **Size**: (Opsiyonel - Bazı Coolify versiyonlarında otomatik ayarlanır veya görünmeyebilir. Eğer görünüyorsa en az 1GB ayarlayın)
+   - **Source Path**: `/data` (container içindeki path)
+   - **Destination Path**: `/data` ⚠️ **BU ALAN ÖNEMLİ!** Container içindeki path'i yazın
+   - **Size**: 1GB veya daha fazla (opsiyonel)
+
+7. **Environment Variables** bölümüne gidin ve ekleyin:
+   ```
+   DATA_DIR=/data
+   ```
 
 ### Volume Ayarları Detayı:
 
 ```
 Name: searchbot-data
-Source Path: /app/data
-Destination Path: /app/data  ← BU ALAN ÖNEMLİ!
+Source Path: /data
+Destination Path: /data  ← BU ALAN ÖNEMLİ!
 ```
 
-**Not:** Volume'u ekledikten sonra container'ı yeniden başlatmanız gerekebilir.
+**Not:** 
+- Volume'u ekledikten sonra container'ı yeniden başlatmanız gerekebilir
+- **Detaylı rehber için:** `PERSISTENT_STORAGE.md` dosyasına bakın
 
 ## 📊 Raporlama ve Veri Erişimi
 
@@ -88,7 +100,7 @@ Destination Path: /app/data  ← BU ALAN ÖNEMLİ!
 1. Coolify'da container'a bağlanın
 2. Veritabanı dosyasını kopyalayın:
    ```bash
-   docker cp <container_id>:/app/data/searchbot.db ./backup_searchbot.db
+   docker cp <container_id>:/data/default/searchbot.db ./backup_searchbot.db
    ```
 
 ### Otomatik Yedekleme (Önerilen):
