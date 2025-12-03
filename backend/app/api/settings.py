@@ -52,16 +52,17 @@ def update_settings(
         settings_data = settings_update.dict(exclude_unset=True)
         settings = SearchSettings(
             search_query=settings_data.get("search_query", "padişah bet"),
-            location=settings_data.get("location", "Fatih,Istanbul"),
+            location="Fatih,Istanbul",  # Varsayılan konum (kullanıcıya gösterilmez)
             enabled=settings_data.get("enabled", True),
             interval_hours=settings_data.get("interval_hours", 12)
         )
         db.add(settings)
     else:
-        # Mevcut ayarları güncelle
+        # Mevcut ayarları güncelle (location değiştirilmez)
         update_data = settings_update.dict(exclude_unset=True)
         for field, value in update_data.items():
-            setattr(settings, field, value)
+            if field != 'location':  # Location kullanıcı tarafından değiştirilemez
+                setattr(settings, field, value)
     
     db.commit()
     db.refresh(settings)
