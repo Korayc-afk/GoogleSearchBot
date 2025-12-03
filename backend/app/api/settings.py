@@ -29,8 +29,7 @@ def get_settings(
             search_query="padişah bet",
             location="Fatih,Istanbul",
             enabled=True,
-            interval_hours=12,
-            serpapi_key=None
+            interval_hours=12
         )
         db.add(settings)
         db.commit()

@@ -13,8 +13,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/panel/default" replace />} />
-        <Route path="/panel/:siteId" element={<AppWithSite />} />
+        <Route path="/" element={<Navigate to="/default" replace />} />
+        <Route path="/:siteId" element={<AppWithSite />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>,

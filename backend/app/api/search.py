@@ -28,9 +28,6 @@ def run_search_now(
     if not settings:
         raise HTTPException(status_code=404, detail="Aktif arama ayarı bulunamadı")
     
-    if not settings.serpapi_key:
-        raise HTTPException(status_code=400, detail="SerpApi key bulunamadı! Lütfen Settings'ten SerpApi key'inizi girin.")
-    
     # Çoklu arama kelimesi desteği
     queries = [q.strip() for q in settings.search_query.split(',') if q.strip()]
     results = []

@@ -5,10 +5,8 @@ import { formatInTimeZone } from 'date-fns-tz'
 function Settings({ API_BASE, settings, onUpdate, siteId = 'default' }) {
   const [formData, setFormData] = useState({
     search_query: '',
-    location: 'Fatih,Istanbul',
     enabled: true,
-    interval_hours: 12,
-    serpapi_key: ''
+    interval_hours: 12
   })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
@@ -25,10 +23,8 @@ function Settings({ API_BASE, settings, onUpdate, siteId = 'default' }) {
     if (settings) {
       setFormData({
         search_query: settings.search_query || '',
-        location: settings.location || 'Fatih,Istanbul',
         enabled: settings.enabled !== undefined ? settings.enabled : true,
-        interval_hours: settings.interval_hours || 12,
-        serpapi_key: settings.serpapi_key || ''
+        interval_hours: settings.interval_hours || 12
       })
     }
     fetchStats()
@@ -264,46 +260,6 @@ function Settings({ API_BASE, settings, onUpdate, siteId = 'default' }) {
           </small>
         </div>
 
-        <div className="form-group">
-          <label>
-            🔑 SerpApi Key
-            <span style={{ marginLeft: '8px', fontSize: '12px', color: '#667eea', fontWeight: 'normal' }}>
-              (Zorunlu)
-            </span>
-          </label>
-          <input
-            type="password"
-            value={formData.serpapi_key}
-            onChange={(e) =>
-              setFormData({ ...formData, serpapi_key: e.target.value })
-            }
-            placeholder="SerpApi API anahtarınızı girin"
-            required
-          />
-          <small style={{ color: '#666', display: 'block', marginTop: '0.5rem', lineHeight: '1.5' }}>
-            💡 <strong>İpucu:</strong> SerpApi key'inizi <a href="https://serpapi.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>serpapi.com/dashboard</a> adresinden alabilirsiniz.
-            <br />
-            Her site kendi SerpApi key'ini kullanır. Key'inizi güvenli tutun!
-          </small>
-        </div>
-
-        <div className="form-group">
-          <label>
-            📍 Arama Konumu
-          </label>
-          <select
-            value={formData.location}
-            onChange={(e) =>
-              setFormData({ ...formData, location: e.target.value })
-            }
-          >
-            <option value="Fatih,Istanbul">Fatih, Istanbul</option>
-            <option value="Istanbul">Istanbul (Genel)</option>
-          </select>
-          <small style={{ color: '#666', display: 'block', marginTop: '0.5rem' }}>
-            Google aramalarının hangi konumdan yapılacağını belirler. Bu, sonuçları etkileyebilir.
-          </small>
-        </div>
 
         <div className="form-group">
           <label>

@@ -56,10 +56,9 @@ class SearchSettings(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     search_query = Column(String, nullable=False, default="padişah bet")  # Virgülle ayrılmış çoklu kelime desteği
-    location = Column(String, nullable=False, default="Fatih,Istanbul")  # Fatih,Istanbul veya Istanbul
+    location = Column(String, nullable=False, default="Fatih,Istanbul")  # Varsayılan konum (kullanıcıya gösterilmez)
     enabled = Column(Boolean, default=True)
     interval_hours = Column(Integer, default=12)
-    serpapi_key = Column(String, nullable=True)  # Her site kendi SerpApi key'ini saklar
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

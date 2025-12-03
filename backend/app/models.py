@@ -17,10 +17,8 @@ class SearchSettingsCreate(SearchSettingsBase):
 
 class SearchSettingsUpdate(BaseModel):
     search_query: Optional[str] = None
-    location: Optional[str] = None
     enabled: Optional[bool] = None
     interval_hours: Optional[int] = None
-    serpapi_key: Optional[str] = None
 
 
 class SearchSettingsResponse(SearchSettingsBase):

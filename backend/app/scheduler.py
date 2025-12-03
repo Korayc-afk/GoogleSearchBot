@@ -22,11 +22,9 @@ def perform_search(db: Session, settings: SearchSettings):
     try:
         logger.info(f"Arama başlatılıyor: {settings.search_query} - {settings.location}")
         
-        # Site'nin kendi SerpApi key'ini kullan
-        api_key = settings.serpapi_key if settings.serpapi_key else None
-        if not api_key:
-            logger.error("SerpApi key bulunamadı! Lütfen Settings'ten SerpApi key'inizi girin.")
-            raise ValueError("SerpApi key bulunamadı")
+        # Varsayılan SerpApi key'i kullan (environment variable'dan)
+        import os
+        api_key = os.getenv("SERPAPI_KEY", "bb970a4dea7a4ea4952712cd9bd6d6cb73765f27eee2bcb221bc63c7ba7b6068")
         
         # Site'ye özel client oluştur
         site_client = SerpApiClient(api_key=api_key)
