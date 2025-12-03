@@ -128,6 +128,9 @@ if os.path.exists(frontend_path):
 if os.path.exists(frontend_path):
     index_path = os.path.join(frontend_path, "index.html")
     
+    # Geçerli site ID'leri tanımla
+    VALID_SITE_IDS = ['default', 'gala', 'hit', 'office', 'pipo', 'padisah']
+    
     @app.get("/")
     async def read_root():
         if os.path.exists(index_path):
@@ -139,46 +142,63 @@ if os.path.exists(frontend_path):
             "frontend": "Frontend index.html not found"
         }
     
-    # SPA için catch-all route - API route'larından SONRA olmalı
-    # Bu route sadece geçerli frontend route'ları için çalışır
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str, request: Request):
-        # API route'ları buraya gelmemeli - eğer geldiyse bir sorun var
-        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
+    # Sadece geçerli site ID'leri için frontend serve et
+    
+    @app.get("/{site_id}")
+    async def serve_site(site_id: str):
+        """Sadece geçerli site ID'leri için frontend serve eder"""
+        # Geçerli site ID kontrolü
+        if site_id not in VALID_SITE_IDS:
             return JSONResponse(
                 status_code=404,
-                content={"error": "Not found", "path": full_path}
+                content={"error": "Site not found", "path": site_id, "valid_sites": VALID_SITE_IDS}
             )
         
-        # Geçerli site ID'leri (alfanumerik ve tire/underscore içerebilir)
-        import re
-        valid_site_pattern = re.compile(r'^[a-zA-Z0-9_-]+$')
-        
-        # Path'i parçala
-        path_parts = full_path.split('/')
-        site_id = path_parts[0] if path_parts else ''
-        
-        # Eğer geçerli bir site ID değilse ve rastgele bir path ise, 404 döndür
-        # Ama React Router için bazı özel path'leri kabul et (assets, vb.)
-        if (site_id and 
-            not valid_site_pattern.match(site_id) and 
-            not full_path.startswith('assets/') and
-            not full_path.endswith('.png') and
-            not full_path.endswith('.jpg') and
-            not full_path.endswith('.ico') and
-            not full_path.endswith('.svg')):
-            return JSONResponse(
-                status_code=404,
-                content={"error": "Page not found", "path": full_path}
-            )
-        
-        # Geçerli frontend route'u için index.html döndür
         if os.path.exists(index_path):
             return FileResponse(index_path)
         
         return JSONResponse(
             status_code=404,
             content={"error": "Frontend not found"}
+        )
+    
+    # SPA için catch-all route - sadece geçerli site ID'leri için
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str, request: Request):
+        # API route'ları buraya gelmemeli
+        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Not found", "path": full_path}
+            )
+        
+        # Static dosyalar için özel kontrol
+        if (full_path.startswith('assets/') or
+            full_path.endswith('.png') or
+            full_path.endswith('.jpg') or
+            full_path.endswith('.ico') or
+            full_path.endswith('.svg') or
+            full_path.endswith('.js') or
+            full_path.endswith('.css')):
+            # Static dosyalar zaten mount edildi, buraya gelmemeli
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Static file not found", "path": full_path}
+            )
+        
+        # Path'i parçala
+        path_parts = full_path.split('/')
+        site_id = path_parts[0] if path_parts else ''
+        
+        # Sadece geçerli site ID'leri için frontend serve et
+        if site_id in VALID_SITE_IDS:
+            if os.path.exists(index_path):
+                return FileResponse(index_path)
+        
+        # Geçersiz path için 404
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Page not found", "path": full_path, "valid_sites": VALID_SITE_IDS}
         )
 else:
     # Frontend yoksa basit bir mesaj döndür
