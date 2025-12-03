@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
+import logging
 from app.database import get_db, SearchSettings, SearchResult, init_db
 from app.models import (
     SearchSettingsResponse, SearchSettingsCreate, SearchSettingsUpdate,
@@ -10,6 +11,7 @@ from app.models import (
 from app.scheduler import update_scheduler_interval, start_scheduler, stop_scheduler, scheduler, run_scheduled_searches
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("", response_model=SearchSettingsResponse)
@@ -67,11 +69,18 @@ def update_settings(
     db.commit()
     db.refresh(settings)
     
-    # Scheduler'ı güncelle
+    # Scheduler'ı güncelle (site'e özel)
     if settings.enabled:
-        update_scheduler_interval(settings.interval_hours)
+        update_scheduler_interval(settings.interval_hours, site_id)
     else:
-        stop_scheduler()
+        # Sadece bu site için job'u kaldır
+        job_id = f"search_job_{site_id}"
+        try:
+            if scheduler.running:
+                scheduler.remove_job(job_id)
+                logger.info(f"🗑️ [{site_id}] Scheduler job durduruldu (enabled=False)")
+        except Exception as e:
+            logger.warning(f"[{site_id}] Job kaldırılırken hata: {e}")
     
     return settings
 
@@ -93,9 +102,9 @@ def create_settings(
     db.commit()
     db.refresh(settings)
     
-    # Scheduler'ı başlat
+    # Scheduler'ı başlat (site'e özel)
     if settings.enabled:
-        update_scheduler_interval(settings.interval_hours)
+        update_scheduler_interval(settings.interval_hours, site_id)
     
     return settings
 
@@ -133,7 +142,8 @@ def get_scheduler_status(
     last_run_time = None
     if is_running:
         try:
-            job = scheduler.get_job("search_job")
+            job_id = f"search_job_{site_id}"
+            job = scheduler.get_job(job_id)
             if job:
                 next_run_time = job.next_run_time
                 # Son çalışma zamanını hesapla (next_run_time'dan interval çıkar)
@@ -201,14 +211,16 @@ def restart_scheduler():
 
 
 @router.post("/scheduler/run-now")
-def run_search_now_manual():
+def run_search_now_manual(
+    site_id: str = Query("default", description="Site ID")
+):
     """Manuel olarak hemen arama yapar"""
     try:
         import threading
-        threading.Thread(target=run_scheduled_searches, daemon=True).start()
+        threading.Thread(target=run_scheduled_searches, args=(site_id,), daemon=True).start()
         return {
             "success": True,
-            "message": "Arama başlatıldı"
+            "message": f"Arama başlatıldı (site: {site_id})"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Arama başlatılırken hata: {str(e)}")

@@ -6,7 +6,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
-from app.database import SessionLocal, SearchSettings, SearchResult, SearchLink
+from app.database import get_session_maker, SearchSettings, SearchResult, SearchLink
 from app.serpapi_client import SerpApiClient
 from app.email_service import email_service
 
@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 scheduler = BackgroundScheduler()
 serpapi_client = SerpApiClient()
+
+# Tüm site ID'leri
+VALID_SITE_IDS = ['default', 'gala', 'hit', 'office', 'pipo', 'padisah']
 
 
 def perform_search(db: Session, settings: SearchSettings):
@@ -168,25 +171,27 @@ def run_daily_summary():
     asyncio.run(send_daily_summary_email())
 
 
-def run_scheduled_searches():
-    """Tüm aktif ayarlar için arama yapar (çoklu kelime desteği ile)"""
+def run_scheduled_searches(site_id: str = "default"):
+    """Belirli bir site için zamanlanmış arama yapar (çoklu kelime desteği ile)"""
     logger.info("=" * 50)
-    logger.info(f"⏰ Zamanlanmış arama tetiklendi: {datetime.utcnow()}")
+    logger.info(f"⏰ [{site_id}] Zamanlanmış arama tetiklendi: {datetime.utcnow()}")
     logger.info("=" * 50)
     
+    # Site'e özel session oluştur
+    SessionLocal = get_session_maker(site_id)
     db = SessionLocal()
     try:
         settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
         
         if settings:
-            logger.info(f"📋 Ayar bulundu: {settings.search_query} - {settings.location} (Interval: {settings.interval_hours} saat)")
+            logger.info(f"📋 [{site_id}] Ayar bulundu: {settings.search_query} - {settings.location} (Interval: {settings.interval_hours} saat)")
             
             # Çoklu arama kelimesi desteği (virgülle ayrılmış)
             queries = [q.strip() for q in settings.search_query.split(',') if q.strip()]
-            logger.info(f"🔍 {len(queries)} kelime için arama yapılacak")
+            logger.info(f"🔍 [{site_id}] {len(queries)} kelime için arama yapılacak")
             
             for query in queries:
-                logger.info(f"🔎 Arama başlatılıyor: '{query}'")
+                logger.info(f"🔎 [{site_id}] Arama başlatılıyor: '{query}'")
                 # Geçici settings objesi oluştur
                 temp_settings = SearchSettings(
                     id=settings.id,
@@ -196,84 +201,98 @@ def run_scheduled_searches():
                     interval_hours=settings.interval_hours
                 )
                 perform_search(db, temp_settings)
-                logger.info(f"✅ '{query}' araması tamamlandı")
+                logger.info(f"✅ [{site_id}] '{query}' araması tamamlandı")
         else:
-            logger.warning("⚠️ Aktif arama ayarı bulunamadı")
+            logger.warning(f"⚠️ [{site_id}] Aktif arama ayarı bulunamadı")
     except Exception as e:
-        logger.error(f"❌ Zamanlanmış arama hatası: {str(e)}", exc_info=True)
+        logger.error(f"❌ [{site_id}] Zamanlanmış arama hatası: {str(e)}", exc_info=True)
     finally:
         db.close()
         logger.info("=" * 50)
 
 
 def start_scheduler():
-    """Scheduler'ı başlatır - veritabanındaki interval_hours ayarına göre"""
+    """Scheduler'ı başlatır - tüm site'lar için ayrı job'lar oluşturur"""
     if scheduler.running:
-        logger.warning("Scheduler zaten çalışıyor")
-        return
+        logger.warning("⚠️ Scheduler zaten çalışıyor, yeniden başlatılıyor...")
+        scheduler.shutdown()
     
-    # Veritabanından interval_hours ayarını al
-    db = SessionLocal()
-    try:
-        settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
-        
-        # Son arama zamanını kontrol et
-        last_result = db.query(SearchResult).order_by(SearchResult.search_date.desc()).first()
-        last_search_date = last_result.search_date if last_result else None
-        
-        if settings:
-            interval_hours = settings.interval_hours
+    logger.info("=" * 60)
+    logger.info("🚀 Scheduler başlatılıyor - Tüm site'lar için...")
+    logger.info("=" * 60)
+    
+    # Her site için ayrı job oluştur
+    for site_id in VALID_SITE_IDS:
+        try:
+            # Site'e özel session oluştur
+            SessionLocal = get_session_maker(site_id)
+            db = SessionLocal()
             
-            # Eğer son arama varsa, interval geçti mi kontrol et
-            should_run_immediately = False
-            if last_search_date:
-                time_since_last = (datetime.utcnow() - last_search_date).total_seconds() / 3600
-                logger.info(f"📅 Son arama: {last_search_date} ({time_since_last:.2f} saat önce)")
+            try:
+                settings = db.query(SearchSettings).filter(SearchSettings.enabled == True).first()
                 
-                # Eğer interval geçtiyse, hemen çalıştır
-                if time_since_last >= interval_hours:
-                    should_run_immediately = True
-                    logger.info(f"⏰ Son aramadan {time_since_last:.2f} saat geçti (interval: {interval_hours} saat), hemen arama yapılacak...")
+                # Son arama zamanını kontrol et
+                last_result = db.query(SearchResult).order_by(SearchResult.search_date.desc()).first()
+                last_search_date = last_result.search_date if last_result else None
+                
+                if settings:
+                    interval_hours = settings.interval_hours
+                    
+                    # Eğer son arama varsa, interval geçti mi kontrol et
+                    should_run_immediately = False
+                    if last_search_date:
+                        time_since_last = (datetime.utcnow() - last_search_date).total_seconds() / 3600
+                        logger.info(f"📅 [{site_id}] Son arama: {last_search_date} ({time_since_last:.2f} saat önce)")
+                        
+                        # Eğer interval geçtiyse, hemen çalıştır
+                        if time_since_last >= interval_hours:
+                            should_run_immediately = True
+                            logger.info(f"⏰ [{site_id}] Son aramadan {time_since_last:.2f} saat geçti (interval: {interval_hours} saat), hemen arama yapılacak...")
+                        else:
+                            # Henüz interval geçmedi, bir sonraki zamanı hesapla
+                            start_date = last_search_date + timedelta(hours=interval_hours)
+                            logger.info(f"⏰ [{site_id}] Bir sonraki arama: {start_date}")
+                    
+                    # Interval'e göre arama job'u ekle (site'e özel)
+                    job_id = f"search_job_{site_id}"
+                    scheduler.add_job(
+                        lambda sid=site_id: run_scheduled_searches(sid),
+                        trigger=IntervalTrigger(hours=interval_hours),
+                        id=job_id,
+                        replace_existing=True
+                    )
+                    
+                    # Eğer hemen çalıştırılması gerekiyorsa
+                    if should_run_immediately:
+                        logger.info(f"🚀 [{site_id}] Hemen arama yapılıyor...")
+                        import threading
+                        threading.Thread(target=run_scheduled_searches, args=(site_id,), daemon=True).start()
+                    
+                    logger.info(f"✅ [{site_id}] Scheduler job eklendi - {interval_hours} saatte bir arama yapılacak")
                 else:
-                    # Henüz interval geçmedi, bir sonraki zamanı hesapla
-                    start_date = last_search_date + timedelta(hours=interval_hours)
-                    logger.info(f"⏰ Bir sonraki arama: {start_date}")
-            
-            # Interval'e göre arama job'u ekle
-            scheduler.add_job(
-                run_scheduled_searches,
-                trigger=IntervalTrigger(hours=interval_hours),
-                id="search_job",
-                replace_existing=True
-            )
-            
-            # Eğer hemen çalıştırılması gerekiyorsa
-            if should_run_immediately:
-                logger.info("🚀 Hemen arama yapılıyor...")
-                import threading
-                threading.Thread(target=run_scheduled_searches, daemon=True).start()
-            
-            logger.info(f"✅ Scheduler başlatıldı - {interval_hours} saatte bir arama yapılacak")
-        else:
-            # Varsayılan: 12 saatte bir
-            scheduler.add_job(
-                run_scheduled_searches,
-                trigger=IntervalTrigger(hours=12),
-                id="search_job",
-                replace_existing=True
-            )
-            logger.info("✅ Scheduler başlatıldı - Varsayılan: 12 saatte bir arama yapılacak")
-    except Exception as e:
-        logger.error(f"❌ Scheduler başlatılırken hata: {e}", exc_info=True)
-        # Hata durumunda varsayılan değer
-        scheduler.add_job(
-            run_scheduled_searches,
-            trigger=IntervalTrigger(hours=12),
-            id="search_job",
-            replace_existing=True
-        )
-    finally:
-        db.close()
+                    # Varsayılan: 12 saatte bir
+                    job_id = f"search_job_{site_id}"
+                    scheduler.add_job(
+                        lambda sid=site_id: run_scheduled_searches(sid),
+                        trigger=IntervalTrigger(hours=12),
+                        id=job_id,
+                        replace_existing=True
+                    )
+                    logger.info(f"✅ [{site_id}] Scheduler job eklendi - Varsayılan: 12 saatte bir arama yapılacak")
+            except Exception as e:
+                logger.error(f"❌ [{site_id}] Scheduler job oluşturulurken hata: {e}", exc_info=True)
+                # Hata durumunda varsayılan değer
+                job_id = f"search_job_{site_id}"
+                scheduler.add_job(
+                    lambda sid=site_id: run_scheduled_searches(sid),
+                    trigger=IntervalTrigger(hours=12),
+                    id=job_id,
+                    replace_existing=True
+                )
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"❌ [{site_id}] Site için session oluşturulurken hata: {e}", exc_info=True)
     
     # Her gün saat 09:00'da günlük özet email gönder
     scheduler.add_job(
@@ -291,6 +310,7 @@ def start_scheduler():
     logger.info(f"📋 Toplam {len(jobs)} job eklendi:")
     for job in jobs:
         logger.info(f"  - {job.id}: {job.trigger} -> Next run: {job.next_run_time}")
+    logger.info("=" * 60)
 
 
 def stop_scheduler():
@@ -300,19 +320,21 @@ def stop_scheduler():
         logger.info("Scheduler durduruldu")
 
 
-def update_scheduler_interval(interval_hours: int):
-    """Scheduler interval'ını günceller"""
-    logger.info(f"🔄 Scheduler interval güncelleniyor: {interval_hours} saat")
+def update_scheduler_interval(interval_hours: int, site_id: str = "default"):
+    """Belirli bir site için scheduler interval'ını günceller"""
+    logger.info(f"🔄 [{site_id}] Scheduler interval güncelleniyor: {interval_hours} saat")
     
     # Mevcut job'u kaldır
+    job_id = f"search_job_{site_id}"
     if scheduler.running:
         try:
-            scheduler.remove_job("search_job")
-            logger.info("🗑️ Eski job kaldırıldı")
+            scheduler.remove_job(job_id)
+            logger.info(f"🗑️ [{site_id}] Eski job kaldırıldı")
         except Exception as e:
-            logger.warning(f"Eski job kaldırılırken hata: {e}")
+            logger.warning(f"[{site_id}] Eski job kaldırılırken hata: {e}")
     
     # Son arama zamanını kontrol et
+    SessionLocal = get_session_maker(site_id)
     db = SessionLocal()
     try:
         last_result = db.query(SearchResult).order_by(SearchResult.search_date.desc()).first()
@@ -322,33 +344,33 @@ def update_scheduler_interval(interval_hours: int):
         should_run_immediately = False
         if last_search_date:
             time_since_last = (datetime.utcnow() - last_search_date).total_seconds() / 3600
-            logger.info(f"📅 Son arama: {last_search_date} ({time_since_last:.2f} saat önce)")
+            logger.info(f"📅 [{site_id}] Son arama: {last_search_date} ({time_since_last:.2f} saat önce)")
             
             # Eğer interval geçtiyse, hemen çalıştır
             if time_since_last >= interval_hours:
                 should_run_immediately = True
-                logger.info(f"⏰ Son aramadan {time_since_last:.2f} saat geçti (interval: {interval_hours} saat), hemen arama yapılacak...")
+                logger.info(f"⏰ [{site_id}] Son aramadan {time_since_last:.2f} saat geçti (interval: {interval_hours} saat), hemen arama yapılacak...")
     finally:
         db.close()
     
-    # Yeni interval ile job ekle
+    # Yeni interval ile job ekle (site'e özel)
     scheduler.add_job(
-        run_scheduled_searches,
+        lambda sid=site_id: run_scheduled_searches(sid),
         trigger=IntervalTrigger(hours=interval_hours),
-        id="search_job",
+        id=job_id,
         replace_existing=True
     )
     
     # Eğer hemen çalıştırılması gerekiyorsa
     if should_run_immediately:
-        logger.info("🚀 Hemen arama yapılıyor...")
+        logger.info(f"🚀 [{site_id}] Hemen arama yapılıyor...")
         import threading
-        threading.Thread(target=run_scheduled_searches, daemon=True).start()
+        threading.Thread(target=run_scheduled_searches, args=(site_id,), daemon=True).start()
     
     # Eğer scheduler çalışmıyorsa başlat
     if not scheduler.running:
         scheduler.start()
         logger.info("🚀 Scheduler başlatıldı")
     
-    logger.info(f"✅ Scheduler güncellendi - {interval_hours} saatte bir arama yapılacak")
+    logger.info(f"✅ [{site_id}] Scheduler güncellendi - {interval_hours} saatte bir arama yapılacak")
 
