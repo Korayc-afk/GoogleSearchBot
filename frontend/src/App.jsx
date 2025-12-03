@@ -58,7 +58,10 @@ function App() {
     <div className={`app ${darkMode ? 'dark' : ''}`}>
       <header className="header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <h1>🔍 Google Search Bot</h1>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <img src="/logo.png" alt="Logo" style={{ height: '40px', width: 'auto' }} />
+            Google Search Bot
+          </h1>
           <button
             onClick={() => setDarkMode(!darkMode)}
             className="dark-mode-toggle"
