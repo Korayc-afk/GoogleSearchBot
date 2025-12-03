@@ -116,20 +116,6 @@ function Settings({ API_BASE, settings, onUpdate, siteId = 'default' }) {
     }
   }
 
-    try {
-      await axios.post(`${API_BASE}/search/run`)
-      setMessage({ type: 'success', text: 'Test araması başarıyla çalıştırıldı!' })
-      setTimeout(() => onUpdate(), 2000)
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error.response?.data?.detail || 'Test araması sırasında hata oluştu'
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div>
       {/* Genel İstatistikler */}
