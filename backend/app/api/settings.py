@@ -116,8 +116,13 @@ def get_scheduler_status(
             total_scheduled_runs=0
         )
     
-    # Scheduler durumu
-    is_running = scheduler.running if scheduler else False
+    # Scheduler durumu - scheduler başlatılmış mı kontrol et
+    is_running = False
+    if scheduler:
+        try:
+            is_running = scheduler.running
+        except:
+            is_running = False
     
     # Son arama zamanı
     last_result = db.query(SearchResult).order_by(SearchResult.search_date.desc()).first()

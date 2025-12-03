@@ -61,14 +61,16 @@ def perform_search(db: Session, settings: SearchSettings):
             db.add(link)
         
         db.commit()
-        logger.info(f"Arama tamamlandı: {len(links)} link kaydedildi")
+        logger.info(f"✅ Arama tamamlandı: {len(links)} link kaydedildi")
+        logger.info(f"✅ Veritabanına kaydedildi - SearchResult ID: {search_result.id}")
         
         # Pozisyon değişikliklerini kontrol et ve email gönder
         check_position_changes(db, links)
         
     except Exception as e:
-        logger.error(f"Arama sırasında hata: {str(e)}")
+        logger.error(f"❌ Arama sırasında hata: {str(e)}", exc_info=True)
         db.rollback()
+        raise  # Hatayı yukarı fırlat ki çağıran fonksiyon görebilsin
 
 
 def check_position_changes(db: Session, new_links: list):

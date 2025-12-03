@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
 from datetime import datetime, timedelta
 from typing import List
+import logging
 from app.database import get_db, SearchSettings, SearchResult, SearchLink, init_db
 from app.models import (
     SearchResultResponse, LinkStatsResponse, DailyReportResponse,
@@ -11,6 +12,7 @@ from app.models import (
 from app.serpapi_client import SerpApiClient
 from app.scheduler import perform_search
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 
@@ -42,8 +44,12 @@ def run_search_now(
         )
         try:
             perform_search(db, temp_settings)
+            # Commit'in başarılı olduğundan emin ol
+            db.commit()
             results.append({"query": query, "status": "success"})
         except Exception as e:
+            db.rollback()
+            logger.error(f"Arama hatası: {str(e)}", exc_info=True)
             results.append({"query": query, "status": "error", "error": str(e)})
     
     return {
