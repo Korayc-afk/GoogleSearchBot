@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
@@ -7,7 +7,7 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
-from app.database import get_db, SearchResult, SearchLink
+from app.database import get_db, SearchResult, SearchLink, init_db
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
