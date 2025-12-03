@@ -112,9 +112,17 @@ app.include_router(analytics.router)
 
 # Frontend static files - API route'larından SONRA mount et
 if os.path.exists(frontend_path):
+    # Assets klasörü (JS, CSS dosyaları)
     assets_path = os.path.join(frontend_path, "assets")
     if os.path.exists(assets_path):
         app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+    
+    # Logo ve diğer public dosyalar için özel route
+    logo_path = os.path.join(frontend_path, "logo.png")
+    if os.path.exists(logo_path):
+        @app.get("/logo.png")
+        async def get_logo():
+            return FileResponse(logo_path)
 
 # Root route ve Frontend SPA routing - EN SON eklenmeli
 if os.path.exists(frontend_path):
