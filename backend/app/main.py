@@ -157,10 +157,16 @@ if os.path.exists(frontend_path):
         return Response(status_code=404)
     
     # SPA için catch-all route - sadece geçerli site ID'leri için
+    # NOT: Bu route EN SONA eklenmeli, API route'larından SONRA
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str, request: Request):
-        # API route'ları buraya gelmemeli - hızlıca 404 döndür
-        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
+        # API route'ları buraya gelmemeli - FastAPI route sıralaması nedeniyle buraya gelmemeli
+        # Path'in ilk segment'ini kontrol et
+        path_parts = full_path.split('/')
+        first_segment = path_parts[0] if path_parts and path_parts[0] else ''
+        
+        # API, docs, openapi path'leri için 404 döndür (zaten yukarıda tanımlı route'lar var)
+        if first_segment in ["api", "docs", "openapi"]:
             return Response(status_code=404)
         
         # Static dosyalar için özel kontrol - hızlıca 404 döndür
@@ -172,10 +178,6 @@ if os.path.exists(frontend_path):
             full_path.endswith('.js') or
             full_path.endswith('.css')):
             return Response(status_code=404)
-        
-        # Path'i parçala ve ilk segment'i kontrol et
-        path_parts = full_path.split('/')
-        first_segment = path_parts[0] if path_parts and path_parts[0] else ''
         
         # Geçersiz path'ler için hızlıca 404 döndür (reverse proxy diğer projeye yönlendirebilir)
         if first_segment and first_segment not in VALID_SITE_IDS:
